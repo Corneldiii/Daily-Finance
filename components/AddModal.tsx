@@ -45,13 +45,13 @@ export default function AddModal({ onClose, onAdd }: Props) {
     <div style={{
       position: "fixed", inset: 0, background: "rgba(0,0,0,0.75)",
       display: "flex", alignItems: "center", justifyContent: "center", padding: "16px",
-      zIndex: 50, padding: "0",
+      zIndex: 50,
     }}
       onClick={(e) => e.target === e.currentTarget && onClose()}
     >
       <div style={{
         background: "var(--surface)", border: "1px solid var(--border2)",
-        borderRadius: "20px 20px 0 0", width: "100%", maxWidth: 480,
+        borderRadius: "20px 20px 20px 20px", width: "100%", maxWidth: 480,
         padding: "24px 24px 40px",
         animation: "slideUp 0.25s ease",
       }}>
