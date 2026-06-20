@@ -24,7 +24,7 @@ export default function TransactionList({ transactions, onDelete }: Props) {
   }, {});
 
   return (
-    <div style={{ background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 16, padding: "20px 24px" }}>
+    <div className="tx-list-container" style={{ background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 16, padding: "20px 24px", maxHeight: 480, overflowY: "auto", scrollBehavior: "smooth" }}>
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 20 }}>
         <div>
           <p style={{ fontSize: 13, fontWeight: 500, color: "var(--text)" }}>Transactions</p>
@@ -83,6 +83,12 @@ export default function TransactionList({ transactions, onDelete }: Props) {
           ))}
         </div>
       )}
+
+      <style>{`
+        .tx-list-container::-webkit-scrollbar { width: 4px; }
+        .tx-list-container::-webkit-scrollbar-track { background: transparent; }
+        .tx-list-container::-webkit-scrollbar-thumb { background: var(--border); border-radius: 99px; }
+      `}</style>
     </div>
   );
 }
