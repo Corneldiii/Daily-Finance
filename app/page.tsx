@@ -5,6 +5,7 @@ import { Transaction } from "@/types";
 import Summary from "@/components/Summary";
 import BarChart from "@/components/BarChart";
 import CategoryList from "@/components/CategoryList";
+import CalendarView from "@/components/CalendarView";
 import TransactionList from "@/components/TransactionList";
 import AddModal from "@/components/AddModal";
 
@@ -52,7 +53,54 @@ export default function Home() {
     setMonth(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`);
   };
 
-  const filtered = transactions.filter(t => t.date.startsWith(month));
+  const getMonthKey = (offset: number) => {
+    const d = new Date();
+    d.setMonth(d.getMonth() + offset);
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+  };
+
+  const currentFiltered = transactions.filter(t => t.date.startsWith(month));
+
+  const getNetBalance = (monthKey: string) => {
+    const txs = transactions.filter(t => t.date.startsWith(monthKey));
+    const income = txs.filter(t => t.type === "income").reduce((s, t) => s + t.amount, 0);
+    const expense = txs.filter(t => t.type === "expense").reduce((s, t) => s + t.amount, 0);
+    return income - expense;
+  };
+
+  const carryOverBalances = (() => {
+    const now = new Date();
+    const currentKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+    const [selY, selM] = month.split("-").map(Number);
+    const selKey = `${selY}-${String(selM).padStart(2, "0")}`;
+    if (selKey <= currentKey) return 0;
+    let carry = 0;
+    const d = new Date(selY, selM - 1, 1);
+    d.setMonth(d.getMonth() - 1);
+    for (let i = 0; i < 12; i++) {
+      const mk = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+      const nb = getNetBalance(mk);
+      if (nb > 0) carry += nb;
+      d.setMonth(d.getMonth() - 1);
+    }
+    return carry;
+  })();
+
+  const adjustedFiltered = [...currentFiltered];
+  if (carryOverBalances > 0 && currentFiltered.length > 0) {
+    const hasIncome = currentFiltered.some(t => t.type === "income" && t.title === "Carry Over");
+    if (!hasIncome) {
+      adjustedFiltered.unshift({
+        id: "carry-over-" + month,
+        title: "Carry Over",
+        amount: carryOverBalances,
+        type: "income" as const,
+        category: "Other" as const,
+        date: `${month}-01`,
+      });
+    }
+  }
+
   const monthLabel = new Date(`${month}-01`).toLocaleString("en-US", { month: "long", year: "numeric" });
 
   return (
@@ -65,6 +113,7 @@ export default function Home() {
           borderBottom: "1px solid var(--border)",
           padding: "14px 0", marginBottom: 24,
           display: "flex", alignItems: "center", justifyContent: "space-between",
+          flexWrap: "wrap", gap: 10,
         }}>
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
             <div style={{
@@ -78,7 +127,7 @@ export default function Home() {
             </div>
           </div>
 
-          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
             <div style={{
               display: "flex", alignItems: "center", gap: 4,
               background: "var(--surface)", border: "1px solid var(--border)",
@@ -93,7 +142,7 @@ export default function Home() {
               display: "flex", alignItems: "center", gap: 6,
               background: "var(--green)", border: "none", borderRadius: 10,
               color: "#000", fontSize: 13, fontWeight: 600,
-              padding: "8px 16px", cursor: "pointer", fontFamily: "DM Sans, sans-serif",
+              padding: "8px 16px", cursor: "pointer", fontFamily: "Inter, sans-serif",
             }}>
               + Add
             </button>
@@ -109,12 +158,13 @@ export default function Home() {
           </div>
         ) : (
           <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-            <Summary transactions={filtered} />
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: 16 }}>
-              <BarChart transactions={transactions} />
-              <CategoryList transactions={filtered} />
+            <Summary transactions={adjustedFiltered} carryOver={carryOverBalances} />
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))", gap: 16 }}>
+              <BarChart transactions={transactions} month={month} />
+              <CategoryList transactions={adjustedFiltered} />
             </div>
-            <TransactionList transactions={filtered} onDelete={handleDelete} />
+            <CalendarView transactions={transactions} />
+            <TransactionList transactions={adjustedFiltered} onDelete={handleDelete} />
           </div>
         )}
       </div>

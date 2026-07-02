@@ -7,6 +7,7 @@ export type Category =
   | "Entertainment"
   | "Bills"
   | "Health"
+  | "Kos"
   | "Other"
   | "Salary"
   | "Freelance"

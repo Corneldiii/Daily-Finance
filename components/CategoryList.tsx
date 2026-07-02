@@ -14,12 +14,12 @@ interface WishItem {
 const COLORS: Record<string, string> = {
   Food: "#f59e0b", Transport: "#3b82f6", Shopping: "#ec4899",
   Entertainment: "#8b5cf6", Bills: "#f97316", Health: "#14b8a6",
-  Other: "#6b7280", Salary: "#00d084", Freelance: "#06b6d4", Investment: "#7c6bff",
+  Kos: "#e879f9", Other: "#6b7280", Salary: "#00d084", Freelance: "#06b6d4", Investment: "#7c6bff",
 };
 
 const ICONS: Record<string, string> = {
   Food: "🍜", Transport: "🚗", Shopping: "🛍️", Entertainment: "🎮",
-  Bills: "🧾", Health: "💊", Other: "📦", Salary: "💼", Freelance: "💻", Investment: "📈",
+  Bills: "🧾", Health: "💊", Kos: "🏠", Other: "📦", Salary: "💼", Freelance: "💻", Investment: "📈",
 };
 
 export default function CategoryList({ transactions }: Props) {
@@ -53,6 +53,10 @@ export default function CategoryList({ transactions }: Props) {
   const currentIncome = transactions
     .filter(t => t.type === "income" && t.date.startsWith(monthKey))
     .reduce((s, t) => s + t.amount, 0);
+  const currentExpense = transactions
+    .filter(t => t.type === "expense" && t.date.startsWith(monthKey))
+    .reduce((s, t) => s + t.amount, 0);
+  const netBalance = currentIncome - currentExpense;
 
   const byCategory = expenses.reduce<Record<string, number>>((acc, t) => {
     acc[t.category] = (acc[t.category] || 0) + t.amount;
@@ -66,7 +70,7 @@ export default function CategoryList({ transactions }: Props) {
   }).format(n);
 
   const wishTotal = wishList.reduce((s, i) => s + i.price, 0);
-  const wishPct = currentIncome > 0 ? Math.min((wishTotal / currentIncome) * 100, 100) : 0;
+  const wishPct = netBalance > 0 ? Math.min((wishTotal / netBalance) * 100, 100) : 0;
   const barColor = wishPct >= 80 ? "#ef4444" : wishPct >= 50 ? "#f97316" : "#1D9E75";
 
   const addItem = async () => {
@@ -242,9 +246,9 @@ export default function CategoryList({ transactions }: Props) {
             </div>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
               <span style={{ fontSize: 10, color: "var(--muted)" }}>
-                {currentIncome > 0
-                  ? `${Math.round(wishPct)}% of this month's income (${fmt(currentIncome)})`
-                  : "No income recorded this month"}
+                {netBalance > 0
+                  ? `${Math.round(wishPct)}% of net balance (${fmt(netBalance)})`
+                  : "No net balance this month"}
               </span>
               {wishPct >= 80 && <span style={{ fontSize: 10, color: "#ef4444", fontWeight: 500 }}>⚠ High spend</span>}
               {wishPct >= 50 && wishPct < 80 && <span style={{ fontSize: 10, color: "#f97316", fontWeight: 500 }}>⚡ Moderate</span>}

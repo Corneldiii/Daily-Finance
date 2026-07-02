@@ -4,18 +4,19 @@ import { Category, Transaction, TransactionType } from "@/types";
 
 interface Props { onClose: () => void; onAdd: (t: Omit<Transaction, "id">) => Promise<void> }
 
-const EXPENSE_CATS: Category[] = ["Food", "Transport", "Shopping", "Entertainment", "Bills", "Health", "Other"];
+const EXPENSE_CATS: Category[] = ["Food", "Transport", "Shopping", "Entertainment", "Bills", "Health", "Kos", "Other"];
 const INCOME_CATS: Category[] = ["Salary", "Freelance", "Investment", "Other"];
 
 const ICONS: Record<string, string> = {
   Food: "🍜", Transport: "🚗", Shopping: "🛍️", Entertainment: "🎮",
-  Bills: "🧾", Health: "💊", Other: "📦", Salary: "💼", Freelance: "💻", Investment: "📈",
+  Bills: "🧾", Health: "💊", Kos: "🏠", Other: "📦", Salary: "💼", Freelance: "💻", Investment: "📈",
 };
 
 export default function AddModal({ onClose, onAdd }: Props) {
   const [type, setType] = useState<TransactionType>("expense");
   const [title, setTitle] = useState("");
   const [amount, setAmount] = useState("");
+  const [amountDisplay, setAmountDisplay] = useState("");
   const [category, setCategory] = useState<Category>("Food");
   const [date, setDate] = useState(new Date().toISOString().split("T")[0]);
   const [loading, setLoading] = useState(false);
@@ -25,6 +26,18 @@ export default function AddModal({ onClose, onAdd }: Props) {
   const handleType = (t: TransactionType) => {
     setType(t);
     setCategory(t === "expense" ? "Food" : "Salary");
+  };
+
+  const formatRupiah = (val: string): string => {
+    const nums = val.replace(/\D/g, "");
+    if (!nums) return "";
+    return nums.replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+  };
+
+  const handleAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const raw = e.target.value.replace(/\D/g, "");
+    setAmount(raw);
+    setAmountDisplay(formatRupiah(raw));
   };
 
   const handleSubmit = async () => {
@@ -38,7 +51,7 @@ export default function AddModal({ onClose, onAdd }: Props) {
   const inputStyle = {
     width: "100%", background: "var(--surface2)", border: "1px solid var(--border)",
     borderRadius: 10, padding: "10px 14px", fontSize: 13, color: "var(--text)",
-    outline: "none", fontFamily: "DM Sans, sans-serif",
+    outline: "none", fontFamily: "Inter, sans-serif",
   };
 
   return (
@@ -68,7 +81,7 @@ export default function AddModal({ onClose, onAdd }: Props) {
           {(["expense", "income"] as TransactionType[]).map(t => (
             <button key={t} onClick={() => handleType(t)} style={{
               flex: 1, padding: "8px 0", borderRadius: 8, border: "none", cursor: "pointer",
-              fontSize: 13, fontWeight: 500, fontFamily: "DM Sans, sans-serif",
+              fontSize: 13, fontWeight: 500, fontFamily: "Inter, sans-serif",
               background: type === t ? (t === "expense" ? "var(--red)" : "var(--green)") : "transparent",
               color: type === t ? "#fff" : "var(--muted)",
               transition: "all 0.2s",
@@ -86,7 +99,18 @@ export default function AddModal({ onClose, onAdd }: Props) {
 
           <div>
             <label style={{ fontSize: 11, color: "var(--muted)", display: "block", marginBottom: 6, textTransform: "uppercase", letterSpacing: "0.08em" }}>Amount (IDR)</label>
-            <input type="number" value={amount} onChange={e => setAmount(e.target.value)} placeholder="0" className="mono" style={{ ...inputStyle, fontSize: 15 }} />
+            <div style={{ position: "relative" }}>
+              <span style={{ position: "absolute", left: 14, top: "50%", transform: "translateY(-50%)", fontSize: 13, color: "var(--muted)", pointerEvents: "none" }}>Rp</span>
+              <input
+                type="text"
+                inputMode="numeric"
+                value={amountDisplay}
+                onChange={handleAmountChange}
+                placeholder="0"
+                className="mono"
+                style={{ ...inputStyle, fontSize: 15, paddingLeft: 44 }}
+              />
+            </div>
           </div>
 
           <div>
@@ -98,7 +122,7 @@ export default function AddModal({ onClose, onAdd }: Props) {
                   borderColor: category === c ? (type === "expense" ? "var(--red)" : "var(--green)") : "var(--border)",
                   background: category === c ? (type === "expense" ? "var(--red-dim)" : "var(--green-dim)") : "transparent",
                   color: category === c ? "var(--text)" : "var(--muted)",
-                  fontSize: 12, cursor: "pointer", fontFamily: "DM Sans, sans-serif",
+                  fontSize: 12, cursor: "pointer", fontFamily: "Inter, sans-serif",
                   transition: "all 0.15s",
                 }}>
                   {ICONS[c]} {c}
@@ -117,7 +141,7 @@ export default function AddModal({ onClose, onAdd }: Props) {
           width: "100%", marginTop: 20, padding: "13px 0", borderRadius: 12, border: "none",
           background: type === "expense" ? "var(--red)" : "var(--green)",
           color: "#fff", fontSize: 14, fontWeight: 500, cursor: "pointer",
-          fontFamily: "DM Sans, sans-serif", opacity: loading || !title || !amount ? 0.5 : 1,
+          fontFamily: "Inter, sans-serif", opacity: loading || !title || !amount ? 0.5 : 1,
           transition: "opacity 0.2s",
         }}>
           {loading ? "Saving..." : `Add ${type === "expense" ? "Expense" : "Income"}`}

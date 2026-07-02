@@ -5,10 +5,11 @@ import { Transaction } from "@/types";
 
 interface Props {
   transactions: Transaction[];
+  month: string;
 }
 
-export default function BarChart({ transactions }: Props) {
-  const [dailyFoodBudget, setDailyFoodBudget] = useState(50000);
+export default function BarChart({ transactions, month }: Props) {
+  const [dailyFoodBudget, setDailyFoodBudget] = useState(30000);
 
   const months = Array.from({ length: 6 }, (_, i) => {
     const d = new Date();
@@ -34,24 +35,29 @@ export default function BarChart({ transactions }: Props) {
 
   const max = Math.max(...data.flatMap((d) => [d.income, d.expense]), 1);
 
-  const fmt = (n: number) =>
-    n >= 1000000
-      ? `${(n / 1000000).toFixed(1)}M`
-      : n >= 1000
-        ? `${(n / 1000).toFixed(0)}K`
-        : `${n}`;
+  const fmtRp = (n: number) => new Intl.NumberFormat("id-ID", {
+    style: "currency", currency: "IDR", maximumFractionDigits: 0,
+  }).format(n);
 
   const today = new Date();
+  const todayKey = today.toISOString().split("T")[0];
+  const currentMonth = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}`;
   const nextMonth = new Date(today.getFullYear(), today.getMonth() + 1, 1);
   const daysLeft = Math.ceil(
     (nextMonth.getTime() - today.getTime()) / (1000 * 60 * 60 * 24)
   );
-  const estimatedFoodCost = dailyFoodBudget * daysLeft;
-  const monthlyAllocation = dailyFoodBudget * 31;
-  const progressPct =
-    monthlyAllocation > 0
-      ? Math.min((estimatedFoodCost / monthlyAllocation) * 100, 100)
-      : 0;
+  const daysInMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0).getDate();
+  const dayOfMonth = today.getDate();
+
+  const todayExpenses = transactions
+    .filter(t => t.date === todayKey && t.type === "expense")
+    .reduce((s, t) => s + t.amount, 0);
+
+  const monthTxs = transactions.filter(t => t.date.startsWith(currentMonth));
+  const monthExpenses = monthTxs.filter(t => t.type === "expense").reduce((s, t) => s + t.amount, 0);
+  const foodSpent = monthTxs.filter(t => t.type === "expense" && t.category === "Food").reduce((s, t) => s + t.amount, 0);
+  const monthlyBudget = dailyFoodBudget * daysInMonth;
+  const foodBudgetPct = monthlyBudget > 0 ? Math.min((foodSpent / monthlyBudget) * 100, 100) : 0;
 
   const untilDate = nextMonth.toLocaleDateString("en-US", {
     month: "short",
@@ -125,7 +131,7 @@ export default function BarChart({ transactions }: Props) {
           display: "flex",
           alignItems: "flex-end",
           gap: 8,
-          minHeight: 120,
+          minHeight: 100,
         }}
       >
         {data.map((d, i) => (
@@ -158,7 +164,7 @@ export default function BarChart({ transactions }: Props) {
                   minHeight: d.income > 0 ? 3 : 0,
                   transition: "height 0.6s ease",
                 }}
-                title={fmt(d.income)}
+                title={fmtRp(d.income)}
               />
               <div
                 style={{
@@ -170,7 +176,7 @@ export default function BarChart({ transactions }: Props) {
                   minHeight: d.expense > 0 ? 3 : 0,
                   transition: "height 0.6s ease",
                 }}
-                title={fmt(d.expense)}
+                title={fmtRp(d.expense)}
               />
             </div>
             <span style={{ fontSize: 10, color: "var(--muted)" }}>
@@ -184,90 +190,106 @@ export default function BarChart({ transactions }: Props) {
       <div
         style={{
           flexShrink: 0,
-          display: "flex",
-          flexDirection: "column",
           borderTop: "1px solid var(--border)",
           marginTop: 20,
           paddingTop: 16,
+          display: "flex",
+          flexDirection: "column",
+          gap: 16,
         }}
       >
-        {/* Section Header + Input inline */}
-        <div style={{ flexShrink: 0, display: "flex", alignItems: "center", gap: 10, marginBottom: 16 }}>
-          <div style={{
-            width: 30, height: 30, borderRadius: 8, background: "#E1F5EE",
-            display: "flex", alignItems: "center", justifyContent: "center",
-            flexShrink: 0, fontSize: 15,
-          }}>🍜</div>
-          <div style={{ flex: 1 }}>
-            <p style={{ fontSize: 13, fontWeight: 600, color: "var(--text)" }}>Food Budget</p>
-            <p style={{ fontSize: 11, color: "var(--muted)", marginTop: 1 }}>
-              {daysLeft} days left in {today.toLocaleString("en-US", { month: "long" })}
-            </p>
+        {/* Pengeluaran Hari Ini */}
+        <div style={{
+          background: "rgba(0,0,0,0.04)", borderRadius: 10, padding: "14px 16px",
+          display: "flex", alignItems: "center", justifyContent: "space-between",
+        }}>
+          <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+            <span style={{ fontSize: 11, color: "var(--muted)" }}>Pengeluaran Hari Ini</span>
+            <span className="mono" style={{ fontSize: 20, fontWeight: 700, color: "var(--text)" }}>
+              {fmtRp(todayExpenses)}
+            </span>
           </div>
-          <div style={{ position: "relative", width: 140 }}>
-            <span style={{
-              position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)",
-              fontSize: 11, color: "var(--muted)", pointerEvents: "none",
-            }}>Rp</span>
-            <input
-              type="number"
-              value={dailyFoodBudget}
-              onChange={(e) => setDailyFoodBudget(Number(e.target.value))}
-              style={{
-                width: "100%", padding: "8px 10px 8px 30px", borderRadius: 8,
-                border: "1px solid var(--border)", background: "transparent",
-                color: "var(--text)", fontSize: 12, outline: "none",
-                WebkitAppearance: "none", MozAppearance: "textfield",
-              } as React.CSSProperties}
-            />
-          </div>
+          <span style={{ fontSize: 11, color: "var(--muted)" }}>
+            {today.toLocaleDateString("id-ID", { day: "numeric", month: "short" })}
+          </span>
         </div>
 
-        {/* Stats Area */}
-        <div style={{ flexShrink: 0, marginBottom: 14 }}>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+        {/* Food Budget Section */}
+        <div>
+          <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 12 }}>
             <div style={{
-              background: "rgba(0,0,0,0.04)", borderRadius: 10, padding: "14px 16px",
+              width: 30, height: 30, borderRadius: 8, background: "#E1F5EE",
+              display: "flex", alignItems: "center", justifyContent: "center",
+              flexShrink: 0, fontSize: 15,
+            }}>🍜</div>
+            <div style={{ flex: 1 }}>
+              <p style={{ fontSize: 13, fontWeight: 600, color: "var(--text)" }}>Food Budget</p>
+              <p style={{ fontSize: 11, color: "var(--muted)", marginTop: 1 }}>
+                {daysLeft} days left in {today.toLocaleString("en-US", { month: "long" })}
+              </p>
+            </div>
+            <div style={{ position: "relative", width: 140 }}>
+              <span style={{
+                position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)",
+                fontSize: 11, color: "var(--muted)", pointerEvents: "none",
+              }}>Rp</span>
+              <input
+                type="number"
+                value={dailyFoodBudget}
+                onChange={(e) => setDailyFoodBudget(Number(e.target.value))}
+                style={{
+                  width: "100%", padding: "8px 10px 8px 30px", borderRadius: 8,
+                  border: "1px solid var(--border)", background: "transparent",
+                  color: "var(--text)", fontSize: 12, outline: "none",
+                  WebkitAppearance: "none", MozAppearance: "textfield",
+                } as React.CSSProperties}
+              />
+            </div>
+          </div>
+
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+            <div style={{
+              background: "rgba(0,0,0,0.04)", borderRadius: 10, padding: "12px 14px",
               display: "flex", flexDirection: "column", gap: 4,
             }}>
-              <span style={{ fontSize: 11, color: "var(--muted)" }}>📅 Days Left</span>
-              <span style={{ fontSize: 22, fontWeight: 700, color: "#0F6E56", letterSpacing: "-0.02em" }}>{daysLeft}</span>
-              <span style={{ fontSize: 10, color: "var(--muted)" }}>of {new Date(today.getFullYear(), today.getMonth() + 1, 0).getDate()} days</span>
+              <span style={{ fontSize: 10, color: "var(--muted)" }}>📅 Days Left</span>
+              <span style={{ fontSize: 20, fontWeight: 700, color: "#0F6E56", letterSpacing: "-0.02em" }}>{daysLeft}</span>
+              <span style={{ fontSize: 9, color: "var(--muted)" }}>of {daysInMonth} days</span>
             </div>
             <div style={{
-              background: "rgba(0,0,0,0.04)", borderRadius: 10, padding: "14px 16px",
+              background: "rgba(0,0,0,0.04)", borderRadius: 10, padding: "12px 14px",
               display: "flex", flexDirection: "column", gap: 4,
             }}>
-              <span style={{ fontSize: 11, color: "var(--muted)" }}>🎯 Budget Until</span>
-              <span style={{ fontSize: 22, fontWeight: 700, color: "var(--text)", letterSpacing: "-0.02em" }}>{untilDate}</span>
-              <span style={{ fontSize: 10, color: "var(--muted)" }}>
-                Rp {(dailyFoodBudget * 31).toLocaleString("id-ID")}/mo
+              <span style={{ fontSize: 10, color: "var(--muted)" }}>🎯 Budget Until</span>
+              <span style={{ fontSize: 20, fontWeight: 700, color: "var(--text)", letterSpacing: "-0.02em" }}>{untilDate}</span>
+              <span style={{ fontSize: 9, color: "var(--muted)" }}>
+                {fmtRp(monthlyBudget)}/mo
               </span>
             </div>
           </div>
         </div>
 
-        {/* Total + Progress Bar */}
-        <div style={{ flexShrink: 0 }}>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
-            <span style={{ fontSize: 11, color: "var(--muted)" }}>Estimated total needed</span>
-            <strong style={{ fontSize: 15, color: "var(--text)" }}>
-              Rp {estimatedFoodCost.toLocaleString("id-ID")}
+        {/* Food Progress Bar */}
+        <div>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
+            <span style={{ fontSize: 11, color: "var(--muted)" }}>Food spent this month</span>
+            <strong className="mono" style={{ fontSize: 13, color: "var(--text)" }}>
+              {fmtRp(foodSpent)} / {fmtRp(monthlyBudget)}
             </strong>
           </div>
-          <div style={{ height: 8, background: "rgba(0,0,0,0.08)", borderRadius: 99, overflow: "hidden" }}>
+          <div style={{ height: 6, background: "rgba(0,0,0,0.08)", borderRadius: 99, overflow: "hidden" }}>
             <div style={{
-              height: "100%", width: `${Math.min(progressPct, 100).toFixed(1)}%`,
-              background: progressPct >= 80 ? "#ef4444" : progressPct >= 50 ? "#f97316" : "#1D9E75",
+              height: "100%", width: `${foodBudgetPct.toFixed(1)}%`,
+              background: foodBudgetPct >= 80 ? "#ef4444" : foodBudgetPct >= 50 ? "#f97316" : "#1D9E75",
               borderRadius: 99, transition: "width 0.4s ease",
             }} />
           </div>
-          <div style={{ display: "flex", justifyContent: "space-between", marginTop: 5 }}>
+          <div style={{ display: "flex", justifyContent: "space-between", marginTop: 4 }}>
             <span style={{ fontSize: 10, color: "var(--muted)" }}>
-              {Math.round(progressPct)}% of monthly allocation
+              {Math.round(foodBudgetPct)}% used
             </span>
             <span style={{ fontSize: 10, color: "var(--muted)" }}>
-              Rp {monthlyAllocation.toLocaleString("id-ID")}
+              {fmtRp(monthlyBudget - foodSpent)} remaining
             </span>
           </div>
         </div>
