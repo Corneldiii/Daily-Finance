@@ -204,13 +204,13 @@ export default function BarChart({ transactions, month }: Props) {
           display: "flex", alignItems: "center", justifyContent: "space-between",
         }}>
           <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
-            <span style={{ fontSize: 11, color: "var(--muted)" }}>Pengeluaran Hari Ini</span>
+            <span style={{ fontSize: 11, color: "var(--muted)" }}>Today&apos;s Expenses</span>
             <span className="mono" style={{ fontSize: 20, fontWeight: 700, color: "var(--text)" }}>
               {fmtRp(todayExpenses)}
             </span>
           </div>
           <span style={{ fontSize: 11, color: "var(--muted)" }}>
-            {today.toLocaleDateString("id-ID", { day: "numeric", month: "short" })}
+            {today.toLocaleDateString("en-US", { day: "numeric", month: "short" })}
           </span>
         </div>
 

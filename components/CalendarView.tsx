@@ -1,33 +1,23 @@
 "use client";
 
-import { useState } from "react";
 import { Transaction } from "@/types";
 
 interface Props {
   transactions: Transaction[];
+  month: string;
 }
 
-export default function CalendarView({ transactions }: Props) {
+export default function CalendarView({ transactions, month }: Props) {
   const now = new Date();
   const currentMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
-  const lastMonth = (() => {
-    const d = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
-  })();
 
-  const [viewMonth, setViewMonth] = useState(currentMonth);
-
-  const toggleMonth = () => {
-    setViewMonth(prev => prev === currentMonth ? lastMonth : currentMonth);
-  };
-
-  const [year, monthNum] = viewMonth.split("-").map(Number);
+  const [year, monthNum] = month.split("-").map(Number);
   const daysInMonth = new Date(year, monthNum, 0).getDate();
   const firstDayOfWeek = new Date(year, monthNum - 1, 1).getDay();
 
   const dailyExpenses: Record<number, number> = {};
   transactions
-    .filter(t => t.date.startsWith(viewMonth) && t.type === "expense")
+    .filter(t => t.date.startsWith(month) && t.type === "expense")
     .forEach(t => {
       const day = new Date(t.date).getDate();
       dailyExpenses[day] = (dailyExpenses[day] || 0) + t.amount;
@@ -46,13 +36,13 @@ export default function CalendarView({ transactions }: Props) {
     : `${n}`;
 
   const monthLabel = new Date(year, monthNum - 1).toLocaleString("en-US", { month: "short", year: "numeric" });
-  const isCurrentMonth = viewMonth === currentMonth;
+  const isCurrentMonth = month === currentMonth;
 
   const totalExpense = Object.values(dailyExpenses).reduce((s, v) => s + v, 0);
   const activeDays = Object.keys(dailyExpenses).length;
   const avgPerDay = activeDays > 0 ? Math.round(totalExpense / activeDays) : 0;
 
-  const dayNames = ["Min", "Sen", "Sel", "Rab", "Kam", "Jum", "Sab"];
+  const dayNames = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
   const cells: ({ day: number; empty: boolean } | { empty: true })[] = [];
   for (let i = 0; i < firstDayOfWeek; i++) cells.push({ empty: true, day: 0 });
@@ -67,21 +57,9 @@ export default function CalendarView({ transactions }: Props) {
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
           <span style={{ fontSize: 12 }}>📅</span>
-          <p style={{ fontSize: 14, fontWeight: 600, color: "var(--text)" }}>Kalender</p>
+          <p style={{ fontSize: 14, fontWeight: 600, color: "var(--text)" }}>Calendar</p>
         </div>
-        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-          <span style={{ fontSize: 14, color: "var(--muted)" }}>{monthLabel}</span>
-          <button
-            onClick={toggleMonth}
-            style={{
-              padding: "5px 12px", borderRadius: 6, border: "1px solid var(--border)",
-              background: "var(--surface2)", color: "var(--text)", fontSize: 13,
-              cursor: "pointer", fontFamily: "Inter, sans-serif",
-            }}
-          >
-            {isCurrentMonth ? "Kemarin" : "Sekarang"}
-          </button>
-        </div>
+        <span style={{ fontSize: 14, color: "var(--muted)" }}>{monthLabel}</span>
       </div>
 
       {/* Day names */}
@@ -112,7 +90,7 @@ export default function CalendarView({ transactions }: Props) {
                 gap: 0,
                 border: isToday ? "1.5px solid var(--accent)" : "1px solid transparent",
               }}
-              title={amount > 0 ? `${cell.day}: Rp ${amount.toLocaleString("id-ID")}` : `${cell.day}: Tidak ada pengeluaran`}
+              title={amount > 0 ? `${cell.day}: Rp ${amount.toLocaleString("id-ID")}` : `${cell.day}: No expenses`}
             >
               <span style={{
                 fontSize: 14, fontWeight: isToday ? 700 : 500,
@@ -145,7 +123,7 @@ export default function CalendarView({ transactions }: Props) {
           ))}
         </div>
         <div style={{ display: "flex", gap: 8 }}>
-          <span style={{ fontSize: 14, color: "var(--muted)" }}>{activeDays} hari aktif</span>
+          <span style={{ fontSize: 14, color: "var(--muted)" }}>{activeDays} active days</span>
           <span className="mono" style={{ fontSize: 14, color: "var(--muted)" }}>avg Rp {fmtShort(avgPerDay)}</span>
         </div>
       </div>

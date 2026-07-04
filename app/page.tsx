@@ -2,10 +2,12 @@
 
 import { useEffect, useState } from "react";
 import { Transaction } from "@/types";
+import { exportToExcel } from "@/utils/excelExport";
 import Summary from "@/components/Summary";
 import BarChart from "@/components/BarChart";
 import CategoryList from "@/components/CategoryList";
 import CalendarView from "@/components/CalendarView";
+import InstallmentTracker from "@/components/InstallmentTracker";
 import TransactionList from "@/components/TransactionList";
 import AddModal from "@/components/AddModal";
 
@@ -103,6 +105,15 @@ export default function Home() {
 
   const monthLabel = new Date(`${month}-01`).toLocaleString("en-US", { month: "long", year: "numeric" });
 
+  const handleExport = () => {
+    let installments: any[] = [];
+    try {
+      const saved = localStorage.getItem("finance_installments");
+      if (saved) installments = JSON.parse(saved);
+    } catch {}
+    exportToExcel(transactions, installments, month);
+  };
+
   return (
     <main style={{ minHeight: "100vh", background: "var(--bg)" }}>
       <div style={{ maxWidth: 900, margin: "0 auto", padding: "0 16px 80px" }}>
@@ -138,6 +149,15 @@ export default function Home() {
               <button onClick={() => changeMonth(1)} style={{ background: "none", border: "none", color: "var(--muted)", cursor: "pointer", fontSize: 14, padding: "0 2px" }}>›</button>
             </div>
 
+            <button onClick={handleExport} style={{
+              display: "flex", alignItems: "center", gap: 6,
+              background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 10,
+              color: "var(--text)", fontSize: 13, fontWeight: 500,
+              padding: "8px 14px", cursor: "pointer", fontFamily: "Inter, sans-serif",
+            }}>
+              📊 Export
+            </button>
+
             <button onClick={() => setShowModal(true)} style={{
               display: "flex", alignItems: "center", gap: 6,
               background: "var(--green)", border: "none", borderRadius: 10,
@@ -163,7 +183,8 @@ export default function Home() {
               <BarChart transactions={transactions} month={month} />
               <CategoryList transactions={adjustedFiltered} />
             </div>
-            <CalendarView transactions={transactions} />
+            <InstallmentTracker month={month} />
+            <CalendarView transactions={transactions} month={month} />
             <TransactionList transactions={adjustedFiltered} onDelete={handleDelete} />
           </div>
         )}

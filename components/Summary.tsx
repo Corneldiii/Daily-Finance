@@ -40,7 +40,7 @@ export default function Summary({ transactions, carryOver = 0 }: Props) {
           <span style={{ fontSize: 9, background: "var(--green-dim)", color: "var(--green)", padding: "2px 6px", borderRadius: 12 }}>IN</span>
         </div>
         <p className="mono" style={{ fontSize: 18, fontWeight: 500, color: "var(--green)" }}>{fmt(income)}</p>
-        <p style={{ fontSize: 11, color: "var(--muted)", marginTop: 4 }}>{transactions.filter(t => t.type === "income").length} transaksi</p>
+        <p style={{ fontSize: 11, color: "var(--muted)", marginTop: 4 }}>{transactions.filter(t => t.type === "income").length} transactions</p>
       </div>
 
       <div style={{ background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 12, padding: "14px 16px" }}>
@@ -49,7 +49,7 @@ export default function Summary({ transactions, carryOver = 0 }: Props) {
           <span style={{ fontSize: 9, background: "var(--red-dim)", color: "var(--red)", padding: "2px 6px", borderRadius: 12 }}>OUT</span>
         </div>
         <p className="mono" style={{ fontSize: 18, fontWeight: 500, color: "var(--red)" }}>{fmt(expense)}</p>
-        <p style={{ fontSize: 11, color: "var(--muted)", marginTop: 4 }}>{transactions.filter(t => t.type === "expense").length} transaksi</p>
+        <p style={{ fontSize: 11, color: "var(--muted)", marginTop: 4 }}>{transactions.filter(t => t.type === "expense").length} transactions</p>
       </div>
     </div>
   );

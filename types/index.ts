@@ -27,3 +27,26 @@ export interface MonthlySummary {
   income: number;
   expense: number;
 }
+
+export type InstallmentType = "Electronics" | "Furniture" | "Vehicle" | "Education" | "Fashion" | "Health" | "Subscription" | "Other";
+
+export interface Installment {
+  id: string;
+  name: string;
+  totalAmount: number;
+  tenure: number;
+  interestRate: number;
+  monthlyPayment: number;
+  source: string;
+  description: string;
+  type: InstallmentType;
+  startDate: string;
+  paidMonths: string[];
+}
+
+export interface MonthlyInstallmentSummary {
+  month: string;
+  installments: { name: string; amount: number; description: string }[];
+  totalAmount: number;
+  remainingBalance: number;
+}

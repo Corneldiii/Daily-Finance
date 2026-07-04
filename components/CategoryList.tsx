@@ -30,7 +30,7 @@ export default function CategoryList({ transactions }: Props) {
   const [itemPrice, setItemPrice] = useState("");
   const [loading, setLoading] = useState(true);
 
-  // Fetch wish list dari Supabase
+  // Fetch wish list from Supabase
   useEffect(() => {
     const fetchWishList = async () => {
       const { data, error } = await supabase
