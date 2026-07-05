@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { Transaction } from "@/types";
 import { exportToExcel } from "@/utils/excelExport";
 import Summary from "@/components/Summary";
@@ -8,6 +8,10 @@ import BarChart from "@/components/BarChart";
 import CategoryList from "@/components/CategoryList";
 import CalendarView from "@/components/CalendarView";
 import InstallmentTracker from "@/components/InstallmentTracker";
+import RecurringTransactions from "@/components/RecurringTransactions";
+import SavingsGoal from "@/components/SavingsGoal";
+import MonthlyComparison from "@/components/MonthlyComparison";
+import CashFlowForecast from "@/components/CashFlowForecast";
 import TransactionList from "@/components/TransactionList";
 import AddModal from "@/components/AddModal";
 
@@ -15,6 +19,9 @@ export default function Home() {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
+  const [selectedDate, setSelectedDate] = useState<string | null>(null);
+  const [editingTx, setEditingTx] = useState<Transaction | null>(null);
+  const txListRef = useRef<HTMLDivElement>(null);
   const [month, setMonth] = useState(() => {
     const d = new Date();
     return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
@@ -35,6 +42,12 @@ export default function Home() {
 
   useEffect(() => { fetchTransactions(); }, []);
 
+  useEffect(() => {
+    if (selectedDate && txListRef.current) {
+      txListRef.current.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+  }, [selectedDate]);
+
   const handleAdd = async (t: Omit<Transaction, "id">) => {
     await fetch("/api/transactions", {
       method: "POST",
@@ -46,6 +59,15 @@ export default function Home() {
 
   const handleDelete = async (id: string) => {
     await fetch(`/api/transactions/${id}`, { method: "DELETE" });
+    fetchTransactions();
+  };
+
+  const handleEdit = async (id: string, t: Omit<Transaction, "id">) => {
+    await fetch(`/api/transactions/${id}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(t),
+    });
     fetchTransactions();
   };
 
@@ -93,7 +115,7 @@ export default function Home() {
     const hasIncome = currentFiltered.some(t => t.type === "income" && t.title === "Carry Over");
     if (!hasIncome) {
       adjustedFiltered.unshift({
-        id: "carry-over-" + month,
+        id: `carry-over-${month}`,
         title: "Carry Over",
         amount: carryOverBalances,
         type: "income" as const,
@@ -178,19 +200,27 @@ export default function Home() {
           </div>
         ) : (
           <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-            <Summary transactions={adjustedFiltered} carryOver={carryOverBalances} />
+            <Summary transactions={adjustedFiltered} carryOver={carryOverBalances} currentMonth={month} />
             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))", gap: 16 }}>
               <BarChart transactions={transactions} month={month} />
               <CategoryList transactions={adjustedFiltered} />
             </div>
+            <RecurringTransactions month={month} />
+            <SavingsGoal transactions={adjustedFiltered} month={month} />
             <InstallmentTracker month={month} />
-            <CalendarView transactions={transactions} month={month} />
-            <TransactionList transactions={adjustedFiltered} onDelete={handleDelete} />
+            <CalendarView transactions={transactions} month={month} selectedDate={selectedDate} onDayClick={setSelectedDate} />
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))", gap: 16 }}>
+              <MonthlyComparison transactions={transactions} month={month} />
+              <CashFlowForecast transactions={transactions} month={month} />
+            </div>
+            <div ref={txListRef}>
+              <TransactionList transactions={adjustedFiltered} onDelete={handleDelete} selectedDate={selectedDate} onClearDate={() => setSelectedDate(null)} onEdit={(tx) => { setEditingTx(tx); setShowModal(true); }} />
+            </div>
           </div>
         )}
       </div>
 
-      {showModal && <AddModal onClose={() => setShowModal(false)} onAdd={handleAdd} />}
+      {showModal && <AddModal onClose={() => { setShowModal(false); setEditingTx(null); }} onAdd={handleAdd} editData={editingTx} onEdit={handleEdit} />}
     </main>
   );
 }

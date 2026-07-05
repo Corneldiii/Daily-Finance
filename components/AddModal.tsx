@@ -2,7 +2,7 @@
 import { useState } from "react";
 import { Category, Transaction, TransactionType } from "@/types";
 
-interface Props { onClose: () => void; onAdd: (t: Omit<Transaction, "id">) => Promise<void> }
+interface Props { onClose: () => void; onAdd: (t: Omit<Transaction, "id">) => Promise<void>; editData?: Transaction | null; onEdit?: (id: string, t: Omit<Transaction, "id">) => Promise<void> }
 
 const EXPENSE_CATS: Category[] = ["Food", "Transport", "Shopping", "Entertainment", "Bills", "Health", "Kos", "Other"];
 const INCOME_CATS: Category[] = ["Salary", "Freelance", "Investment", "Other"];
@@ -12,13 +12,19 @@ const ICONS: Record<string, string> = {
   Bills: "🧾", Health: "💊", Kos: "🏠", Other: "📦", Salary: "💼", Freelance: "💻", Investment: "📈",
 };
 
-export default function AddModal({ onClose, onAdd }: Props) {
-  const [type, setType] = useState<TransactionType>("expense");
-  const [title, setTitle] = useState("");
-  const [amount, setAmount] = useState("");
-  const [amountDisplay, setAmountDisplay] = useState("");
-  const [category, setCategory] = useState<Category>("Food");
-  const [date, setDate] = useState(new Date().toISOString().split("T")[0]);
+const formatRupiah = (val: string): string => {
+  const nums = val.replace(/\D/g, "");
+  if (!nums) return "";
+  return nums.replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+};
+
+export default function AddModal({ onClose, onAdd, editData, onEdit }: Props) {
+  const [type, setType] = useState<TransactionType>(editData?.type || "expense");
+  const [title, setTitle] = useState(editData?.title || "");
+  const [amount, setAmount] = useState(editData ? String(editData.amount) : "");
+  const [amountDisplay, setAmountDisplay] = useState(editData ? formatRupiah(String(editData.amount)) : "");
+  const [category, setCategory] = useState<Category>(editData?.category || "Food");
+  const [date, setDate] = useState(editData?.date || new Date().toISOString().split("T")[0]);
   const [loading, setLoading] = useState(false);
 
   const cats = type === "expense" ? EXPENSE_CATS : INCOME_CATS;
@@ -26,12 +32,6 @@ export default function AddModal({ onClose, onAdd }: Props) {
   const handleType = (t: TransactionType) => {
     setType(t);
     setCategory(t === "expense" ? "Food" : "Salary");
-  };
-
-  const formatRupiah = (val: string): string => {
-    const nums = val.replace(/\D/g, "");
-    if (!nums) return "";
-    return nums.replace(/\B(?=(\d{3})+(?!\d))/g, ".");
   };
 
   const handleAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -43,7 +43,11 @@ export default function AddModal({ onClose, onAdd }: Props) {
   const handleSubmit = async () => {
     if (!title.trim() || !amount || isNaN(Number(amount))) return;
     setLoading(true);
-    await onAdd({ title: title.trim(), amount: Number(amount), type, category, date });
+    if (editData && onEdit) {
+      await onEdit(editData.id, { title: title.trim(), amount: Number(amount), type, category, date });
+    } else {
+      await onAdd({ title: title.trim(), amount: Number(amount), type, category, date });
+    }
     setLoading(false);
     onClose();
   };
@@ -73,7 +77,7 @@ export default function AddModal({ onClose, onAdd }: Props) {
         <div style={{ width: 36, height: 4, background: "var(--border2)", borderRadius: 2, margin: "0 auto 20px" }} />
 
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 20 }}>
-          <p style={{ fontSize: 15, fontWeight: 500, color: "var(--text)" }}>New Transaction</p>
+          <p style={{ fontSize: 15, fontWeight: 500, color: "var(--text)" }}>{editData ? "Edit Transaction" : "New Transaction"}</p>
           <button onClick={onClose} style={{ background: "none", border: "none", color: "var(--muted)", cursor: "pointer", fontSize: 16 }}>✕</button>
         </div>
 
@@ -144,7 +148,7 @@ export default function AddModal({ onClose, onAdd }: Props) {
           fontFamily: "Inter, sans-serif", opacity: loading || !title || !amount ? 0.5 : 1,
           transition: "opacity 0.2s",
         }}>
-          {loading ? "Saving..." : `Add ${type === "expense" ? "Expense" : "Income"}`}
+          {loading ? "Saving..." : editData ? "Save Changes" : `Add ${type === "expense" ? "Expense" : "Income"}`}
         </button>
       </div>
     </div>

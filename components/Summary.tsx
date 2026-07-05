@@ -1,13 +1,24 @@
 "use client";
 import { Transaction } from "@/types";
 
-interface Props { transactions: Transaction[]; carryOver?: number }
+interface Props { transactions: Transaction[]; carryOver?: number; currentMonth?: string }
 
-export default function Summary({ transactions, carryOver = 0 }: Props) {
+export default function Summary({ transactions, carryOver = 0, currentMonth }: Props) {
   const income = transactions.filter(t => t.type === "income").reduce((s, t) => s + t.amount, 0);
   const expense = transactions.filter(t => t.type === "expense").reduce((s, t) => s + t.amount, 0);
   const balance = income - expense;
   const savingsRate = income > 0 ? Math.round(((income - expense) / income) * 100) : 0;
+
+  const now = new Date();
+  const today = now.getDate();
+  const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+  const isCurrentMonth = currentMonth === `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+
+  const expenseDays = transactions.filter(t => t.type === "expense" && t.date.startsWith(currentMonth || `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`)).reduce<Set<string>>((acc, t) => { acc.add(t.date); return acc; }, new Set());
+  const activeDays = expenseDays.size;
+  const avgPerDay = activeDays > 0 ? Math.round(expense / activeDays) : 0;
+  const daysLeft = isCurrentMonth ? daysInMonth - today : daysInMonth;
+  const projectedDays = avgPerDay > 0 ? Math.floor(balance / avgPerDay) : (balance > 0 ? Infinity : 0);
 
   const fmt = (n: number) => new Intl.NumberFormat("id-ID", {
     style: "currency", currency: "IDR", maximumFractionDigits: 0,
@@ -27,6 +38,25 @@ export default function Summary({ transactions, carryOver = 0 }: Props) {
         <p style={{ fontSize: 11, color: "var(--muted)", marginTop: 4 }}>
           Savings: <span style={{ color: savingsRate >= 30 ? "var(--green)" : "var(--muted)" }}>{savingsRate}%</span>
         </p>
+        {isCurrentMonth && avgPerDay > 0 && (
+          <p style={{ fontSize: 9, color: "var(--muted)", marginTop: 3 }}>
+            avg <span className="mono">{fmt(avgPerDay)}</span>/day &middot;{" "}
+            <span style={{ color: projectedDays >= daysLeft ? "var(--green)" : projectedDays >= 7 ? "#fbbf24" : "var(--red)" }}>
+              {projectedDays === Infinity ? "∞" : `${projectedDays}d`} left
+            </span>{" "}
+            <span style={{ opacity: 0.5 }}>({daysLeft}d remaining)</span>
+          </p>
+        )}
+        {isCurrentMonth && balance < 0 && (
+          <p style={{ fontSize: 9, color: "var(--red)", marginTop: 3, fontWeight: 500 }}>
+            🔴 Over budget! Reduce spending or add income
+          </p>
+        )}
+        {isCurrentMonth && balance > 0 && avgPerDay > 0 && projectedDays < daysLeft && projectedDays >= 0 && (
+          <p style={{ fontSize: 9, color: "#fbbf24", marginTop: 3, fontWeight: 500 }}>
+            ⚠️ Running low — pace exceeds income
+          </p>
+        )}
         {carryOver > 0 && (
           <p style={{ fontSize: 9, color: "var(--accent)", marginTop: 3 }}>
             + {fmt(carryOver)} carry over

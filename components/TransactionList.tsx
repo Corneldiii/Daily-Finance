@@ -2,7 +2,7 @@
 import { useState } from "react";
 import { Transaction } from "@/types";
 
-interface Props { transactions: Transaction[]; onDelete: (id: string) => void }
+interface Props { transactions: Transaction[]; onDelete: (id: string) => void; selectedDate?: string | null; onClearDate?: () => void; onEdit?: (tx: Transaction) => void }
 
 const ICONS: Record<string, string> = {
   Food: "🍜", Transport: "🚗", Shopping: "🛍️", Entertainment: "🎮",
@@ -11,16 +11,18 @@ const ICONS: Record<string, string> = {
 
 const EXPENSE_FILTERS = ["All", "Food", "Transport", "Shopping", "Entertainment", "Bills", "Health", "Kos", "Other"] as const;
 
-export default function TransactionList({ transactions, onDelete }: Props) {
+export default function TransactionList({ transactions, onDelete, selectedDate, onClearDate, onEdit }: Props) {
   const [filterCat, setFilterCat] = useState<string>("All");
+  const [search, setSearch] = useState("");
 
   const fmt = (n: number) => new Intl.NumberFormat("id-ID", {
     style: "currency", currency: "IDR", maximumFractionDigits: 0,
   }).format(n);
 
-  const filtered = filterCat === "All"
-    ? transactions
-    : transactions.filter(t => t.category === filterCat);
+  const filtered = transactions
+    .filter(t => filterCat === "All" || t.category === filterCat)
+    .filter(t => !selectedDate || t.date === selectedDate)
+    .filter(t => !search || t.title.toLowerCase().includes(search.toLowerCase()));
 
   const sorted = [...filtered].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
@@ -38,8 +40,22 @@ export default function TransactionList({ transactions, onDelete }: Props) {
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
           <div>
             <p style={{ fontSize: 13, fontWeight: 500, color: "var(--text)" }}>Transactions</p>
-            <p style={{ fontSize: 11, color: "var(--muted)", marginTop: 2 }}>{sorted.length} records this month</p>
+            <p style={{ fontSize: 11, color: "var(--muted)", marginTop: 2 }}>
+              {selectedDate
+                ? `${new Date(selectedDate).toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" })} · ${sorted.length} records`
+                : `${sorted.length} records this month`
+              }
+            </p>
           </div>
+          {selectedDate && (
+            <button onClick={() => onClearDate?.()} style={{
+              padding: "4px 10px", borderRadius: 8, border: "1px solid var(--border)",
+              background: "var(--surface2)", color: "var(--muted)", fontSize: 11,
+              cursor: "pointer", fontFamily: "Inter, sans-serif",
+            }}>
+              ✕ Clear date
+            </button>
+          )}
         </div>
         <div style={{ display: "flex", gap: 6, overflowX: "auto", paddingBottom: 4 }} className="filter-scroll">
           {EXPENSE_FILTERS.map(f => (
@@ -54,6 +70,25 @@ export default function TransactionList({ transactions, onDelete }: Props) {
               {f !== "All" && `${ICONS[f] || ""} `}{f}
             </button>
           ))}
+        </div>
+        <div style={{ position: "relative", marginTop: 8 }}>
+          <span style={{ position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)", fontSize: 13, color: "var(--muted)" }}>🔍</span>
+          <input
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            placeholder="Search transactions..."
+            style={{
+              width: "100%", background: "var(--surface2)", border: "1px solid var(--border)",
+              borderRadius: 8, padding: "7px 10px 7px 30px", fontSize: 12, color: "var(--text)",
+              outline: "none", fontFamily: "Inter, sans-serif",
+            }}
+          />
+          {search && (
+            <button onClick={() => setSearch("")} style={{
+              position: "absolute", right: 8, top: "50%", transform: "translateY(-50%)",
+              background: "none", border: "none", color: "var(--muted)", cursor: "pointer", fontSize: 12,
+            }}>✕</button>
+          )}
         </div>
       </div>
 
@@ -93,6 +128,14 @@ export default function TransactionList({ transactions, onDelete }: Props) {
                     <span className="mono" style={{ fontSize: 13, fontWeight: 500, color: t.type === "income" ? "var(--green)" : "var(--red)", flexShrink: 0 }}>
                       {t.type === "income" ? "+" : "-"}{fmt(t.amount)}
                     </span>
+                    <button onClick={() => onEdit?.(t)} style={{
+                      background: "none", border: "none", cursor: "pointer",
+                      color: "var(--muted)", fontSize: 12, padding: "4px",
+                      opacity: 0, transition: "opacity 0.15s",
+                    }}
+                      onMouseEnter={e => { e.currentTarget.style.opacity = "1"; e.currentTarget.style.color = "var(--accent)"; }}
+                      onMouseLeave={e => { e.currentTarget.style.opacity = "0"; e.currentTarget.style.color = "var(--muted)"; }}
+                    >✎</button>
                     <button onClick={() => onDelete(t.id)} style={{
                       background: "none", border: "none", cursor: "pointer",
                       color: "var(--muted)", fontSize: 12, padding: "4px",

@@ -5,9 +5,11 @@ import { Transaction } from "@/types";
 interface Props {
   transactions: Transaction[];
   month: string;
+  selectedDate?: string | null;
+  onDayClick?: (date: string | null) => void;
 }
 
-export default function CalendarView({ transactions, month }: Props) {
+export default function CalendarView({ transactions, month, selectedDate, onDayClick }: Props) {
   const now = new Date();
   const currentMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
 
@@ -76,19 +78,25 @@ export default function CalendarView({ transactions, month }: Props) {
           const amount = dailyExpenses[cell.day] || 0;
           const color = getColor(amount);
           const isToday = isCurrentMonth && cell.day === now.getDate();
+          const dateStr = `${month}-${String(cell.day).padStart(2, "0")}`;
+          const isSelected = selectedDate === dateStr;
+          const hasTx = amount > 0;
           return (
             <div
               key={cell.day}
+              onClick={() => onDayClick?.(isSelected ? null : dateStr)}
               style={{
                 aspectRatio: "1",
                 borderRadius: 4,
-                background: color.bg,
+                background: isSelected ? "var(--accent-dim)" : color.bg,
                 display: "flex",
                 flexDirection: "column",
                 alignItems: "center",
                 justifyContent: "center",
                 gap: 0,
-                border: isToday ? "1.5px solid var(--accent)" : "1px solid transparent",
+                border: isSelected ? "1.5px solid var(--accent)" : isToday ? "1.5px solid var(--accent)" : "1px solid transparent",
+                cursor: hasTx ? "pointer" : "default",
+                transition: "all 0.15s",
               }}
               title={amount > 0 ? `${cell.day}: Rp ${amount.toLocaleString("id-ID")}` : `${cell.day}: No expenses`}
             >
