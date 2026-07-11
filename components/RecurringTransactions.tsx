@@ -1,6 +1,6 @@
 "use client";
 import { useState, useEffect } from "react";
-import { Category, Transaction, TransactionType } from "@/types";
+import { Category, TransactionType } from "@/types";
 
 interface Props {
   month: string;
@@ -24,8 +24,6 @@ const ICONS: Record<string, string> = {
   Bills: "🧾", Health: "💊", Kos: "🏠", Other: "📦", Salary: "💼", Freelance: "💻", Investment: "📈",
 };
 
-const STORAGE_KEY = "finance_recurring";
-
 export default function RecurringTransactions({ month }: Props) {
   const [items, setItems] = useState<RecurringItem[]>([]);
   const [showForm, setShowForm] = useState(false);
@@ -36,17 +34,15 @@ export default function RecurringTransactions({ month }: Props) {
   const [category, setCategory] = useState<Category>("Food");
   const [dayOfMonth, setDayOfMonth] = useState("1");
 
-  useEffect(() => {
+  const fetchItems = async () => {
     try {
-      const saved = localStorage.getItem(STORAGE_KEY);
-      if (saved) setItems(JSON.parse(saved));
+      const res = await fetch("/api/recurring");
+      const data = await res.json();
+      setItems(data.items || []);
     } catch {}
-  }, []);
-
-  const saveItems = (newItems: RecurringItem[]) => {
-    setItems(newItems);
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(newItems));
   };
+
+  useEffect(() => { fetchItems(); }, []);
 
   const formatRupiah = (val: string): string => {
     const nums = val.replace(/\D/g, "");
@@ -60,30 +56,39 @@ export default function RecurringTransactions({ month }: Props) {
     setAmountDisplay(formatRupiah(raw));
   };
 
-  const addItem = () => {
+  const addItem = async () => {
     if (!title.trim() || !amount) return;
-    const newItem: RecurringItem = {
-      id: Date.now().toString(),
-      title: title.trim(),
-      amount: Number(amount),
-      type,
-      category,
-      dayOfMonth: Math.min(Math.max(Number(dayOfMonth) || 1, 1), 28),
-      active: true,
-    };
-    saveItems([...items, newItem]);
+    await fetch("/api/recurring", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        title: title.trim(),
+        amount: Number(amount),
+        type,
+        category,
+        dayOfMonth: Math.min(Math.max(Number(dayOfMonth) || 1, 1), 28),
+        active: true,
+      }),
+    });
     setTitle("");
     setAmount("");
     setAmountDisplay("");
     setShowForm(false);
+    fetchItems();
   };
 
-  const toggleItem = (id: string) => {
-    saveItems(items.map(i => i.id === id ? { ...i, active: !i.active } : i));
+  const toggleItem = async (item: RecurringItem) => {
+    await fetch(`/api/recurring/${item.id}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ ...item, active: !item.active }),
+    });
+    fetchItems();
   };
 
-  const removeItem = (id: string) => {
-    saveItems(items.filter(i => i.id !== id));
+  const removeItem = async (id: string) => {
+    await fetch(`/api/recurring/${id}`, { method: "DELETE" });
+    fetchItems();
   };
 
   const fmt = (n: number) => new Intl.NumberFormat("id-ID", {
@@ -192,7 +197,7 @@ export default function RecurringTransactions({ month }: Props) {
               <span className="mono" style={{ fontSize: 12, color: item.type === "income" ? "var(--green)" : "var(--red)", flexShrink: 0 }}>
                 {item.type === "income" ? "+" : "-"}{fmt(item.amount)}
               </span>
-              <button onClick={() => toggleItem(item.id)} title="Disable" style={{ background: "none", border: "none", cursor: "pointer", color: "var(--green)", fontSize: 12, padding: 2 }}>●</button>
+              <button onClick={() => toggleItem(item)} title="Disable" style={{ background: "none", border: "none", cursor: "pointer", color: "var(--green)", fontSize: 12, padding: 2 }}>●</button>
               <button onClick={() => removeItem(item.id)} title="Delete" style={{ background: "none", border: "none", cursor: "pointer", color: "var(--muted)", fontSize: 12, padding: 2 }}>✕</button>
             </div>
           ))}
@@ -209,7 +214,7 @@ export default function RecurringTransactions({ month }: Props) {
                 <p style={{ fontSize: 10, color: "var(--muted)" }}>Day {item.dayOfMonth} · {item.category}</p>
               </div>
               <span className="mono" style={{ fontSize: 12, color: "var(--muted)", flexShrink: 0 }}>{fmt(item.amount)}</span>
-              <button onClick={() => toggleItem(item.id)} title="Enable" style={{ background: "none", border: "none", cursor: "pointer", color: "var(--muted)", fontSize: 12, padding: 2 }}>○</button>
+              <button onClick={() => toggleItem(item)} title="Enable" style={{ background: "none", border: "none", cursor: "pointer", color: "var(--muted)", fontSize: 12, padding: 2 }}>○</button>
               <button onClick={() => removeItem(item.id)} title="Delete" style={{ background: "none", border: "none", cursor: "pointer", color: "var(--muted)", fontSize: 12, padding: 2 }}>✕</button>
             </div>
           ))}

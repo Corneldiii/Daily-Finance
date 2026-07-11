@@ -56,7 +56,10 @@ export default function CategoryList({ transactions }: Props) {
   const currentExpense = transactions
     .filter(t => t.type === "expense" && t.date.startsWith(monthKey))
     .reduce((s, t) => s + t.amount, 0);
-  const netBalance = currentIncome - currentExpense;
+  const currentSaving = transactions
+    .filter(t => t.type === "saving" && t.date.startsWith(monthKey))
+    .reduce((s, t) => s + t.amount, 0);
+  const netBalance = currentIncome - currentExpense - currentSaving;
 
   const byCategory = expenses.reduce<Record<string, number>>((acc, t) => {
     acc[t.category] = (acc[t.category] || 0) + t.amount;

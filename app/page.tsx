@@ -11,7 +11,6 @@ import InstallmentTracker from "@/components/InstallmentTracker";
 import RecurringTransactions from "@/components/RecurringTransactions";
 import SavingsGoal from "@/components/SavingsGoal";
 import MonthlyComparison from "@/components/MonthlyComparison";
-import CashFlowForecast from "@/components/CashFlowForecast";
 import TransactionList from "@/components/TransactionList";
 import AddModal from "@/components/AddModal";
 
@@ -89,7 +88,8 @@ export default function Home() {
     const txs = transactions.filter(t => t.date.startsWith(monthKey));
     const income = txs.filter(t => t.type === "income").reduce((s, t) => s + t.amount, 0);
     const expense = txs.filter(t => t.type === "expense").reduce((s, t) => s + t.amount, 0);
-    return income - expense;
+    const saving = txs.filter(t => t.type === "saving").reduce((s, t) => s + t.amount, 0);
+    return income - expense - saving;
   };
 
   const carryOverBalances = (() => {
@@ -209,10 +209,7 @@ export default function Home() {
             <SavingsGoal transactions={adjustedFiltered} month={month} />
             <InstallmentTracker month={month} />
             <CalendarView transactions={transactions} month={month} selectedDate={selectedDate} onDayClick={setSelectedDate} />
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))", gap: 16 }}>
-              <MonthlyComparison transactions={transactions} month={month} />
-              <CashFlowForecast transactions={transactions} month={month} />
-            </div>
+            <MonthlyComparison transactions={transactions} month={month} />
             <div ref={txListRef}>
               <TransactionList transactions={adjustedFiltered} onDelete={handleDelete} selectedDate={selectedDate} onClearDate={() => setSelectedDate(null)} onEdit={(tx) => { setEditingTx(tx); setShowModal(true); }} />
             </div>

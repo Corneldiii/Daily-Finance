@@ -1,4 +1,4 @@
-export type TransactionType = "income" | "expense";
+export type TransactionType = "income" | "expense" | "saving";
 
 export type Category =
   | "Food"
@@ -11,7 +11,10 @@ export type Category =
   | "Other"
   | "Salary"
   | "Freelance"
-  | "Investment";
+  | "Investment"
+  | "Tabungan"
+  | "Investasi"
+  | "Dana Darurat";
 
 export interface Transaction {
   id: string;

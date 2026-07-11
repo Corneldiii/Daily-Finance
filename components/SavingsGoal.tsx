@@ -13,8 +13,6 @@ interface Goal {
   deadline?: string;
 }
 
-const STORAGE_KEY = "finance_savings_goals";
-
 const GOAL_ICONS = ["🏖️", "🏠", "🚗", "💻", "📱", "✈️", "🎓", "💍", "🏥", "🎮", "📚", "🏋️"];
 
 export default function SavingsGoal({ transactions, month }: Props) {
@@ -29,17 +27,15 @@ export default function SavingsGoal({ transactions, month }: Props) {
   const [addAmount, setAddAmount] = useState("");
   const [addAmountDisplay, setAddAmountDisplay] = useState("");
 
-  useEffect(() => {
+  const fetchGoals = async () => {
     try {
-      const saved = localStorage.getItem(STORAGE_KEY);
-      if (saved) setGoals(JSON.parse(saved));
+      const res = await fetch("/api/savings-goals");
+      const data = await res.json();
+      setGoals(data.goals || []);
     } catch {}
-  }, []);
-
-  const saveGoals = (g: Goal[]) => {
-    setGoals(g);
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(g));
   };
+
+  useEffect(() => { fetchGoals(); }, []);
 
   const formatRupiah = (val: string): string => {
     const nums = val.replace(/\D/g, "");
@@ -59,38 +55,49 @@ export default function SavingsGoal({ transactions, month }: Props) {
     setAddAmountDisplay(formatRupiah(raw));
   };
 
-  const addGoal = () => {
+  const addGoal = async () => {
     if (!name.trim() || !target) return;
-    const newGoal: Goal = {
-      id: Date.now().toString(),
-      name: name.trim(),
-      targetAmount: Number(target),
-      savedAmount: 0,
-      icon,
-      deadline: deadline || undefined,
-    };
-    saveGoals([...goals, newGoal]);
+    await fetch("/api/savings-goals", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        name: name.trim(),
+        targetAmount: Number(target),
+        savedAmount: 0,
+        icon,
+        deadline: deadline || null,
+      }),
+    });
     setName("");
     setTarget("");
     setTargetDisplay("");
     setDeadline("");
     setShowForm(false);
+    fetchGoals();
   };
 
-  const removeGoal = (id: string) => {
-    saveGoals(goals.filter(g => g.id !== id));
+  const removeGoal = async (id: string) => {
+    await fetch(`/api/savings-goals/${id}`, { method: "DELETE" });
+    fetchGoals();
   };
 
-  const addToGoal = (id: string) => {
+  const addToGoal = async (id: string) => {
     const amount = Number(addAmount);
     if (!amount || amount <= 0) return;
-    saveGoals(goals.map(g => g.id === id ? { ...g, savedAmount: g.savedAmount + amount } : g));
+    const goal = goals.find(g => g.id === id);
+    if (!goal) return;
+    await fetch(`/api/savings-goals/${id}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ ...goal, savedAmount: goal.savedAmount + amount }),
+    });
     setAddingTo(null);
     setAddAmount("");
     setAddAmountDisplay("");
+    fetchGoals();
   };
 
-  const autoSaveFromBalance = () => {
+  const autoSaveFromBalance = async () => {
     const income = transactions.filter(t => t.type === "income").reduce((s, t) => s + t.amount, 0);
     const expense = transactions.filter(t => t.type === "expense").reduce((s, t) => s + t.amount, 0);
     const balance = income - expense;
@@ -102,12 +109,17 @@ export default function SavingsGoal({ transactions, month }: Props) {
     const perGoal = Math.floor(balance / unmetGoals.length);
     if (perGoal <= 0) return;
 
-    saveGoals(goals.map(g => {
-      if (g.savedAmount >= g.targetAmount) return g;
+    for (const g of goals) {
+      if (g.savedAmount >= g.targetAmount) continue;
       const remaining = g.targetAmount - g.savedAmount;
       const toAdd = Math.min(perGoal, remaining);
-      return { ...g, savedAmount: g.savedAmount + toAdd };
-    }));
+      await fetch(`/api/savings-goals/${g.id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ...g, savedAmount: g.savedAmount + toAdd }),
+      });
+    }
+    fetchGoals();
   };
 
   const fmt = (n: number) => new Intl.NumberFormat("id-ID", {

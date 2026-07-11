@@ -7,6 +7,7 @@ interface Props { transactions: Transaction[]; onDelete: (id: string) => void; s
 const ICONS: Record<string, string> = {
   Food: "🍜", Transport: "🚗", Shopping: "🛍️", Entertainment: "🎮",
   Bills: "🧾", Health: "💊", Kos: "🏠", Other: "📦", Salary: "💼", Freelance: "💻", Investment: "📈",
+  Tabungan: "🏦", "Dana Darurat": "🛡️",
 };
 
 const EXPENSE_FILTERS = ["All", "Food", "Transport", "Shopping", "Entertainment", "Bills", "Health", "Kos", "Other"] as const;
@@ -115,7 +116,7 @@ export default function TransactionList({ transactions, onDelete, selectedDate, 
                   >
                     <div style={{
                       width: 36, height: 36, borderRadius: 10,
-                      background: t.type === "income" ? "var(--green-dim)" : "var(--surface2)",
+                      background: t.type === "income" ? "var(--green-dim)" : t.type === "saving" ? "var(--accent-dim)" : "var(--surface2)",
                       display: "flex", alignItems: "center", justifyContent: "center",
                       fontSize: 16, flexShrink: 0,
                     }}>
@@ -125,7 +126,7 @@ export default function TransactionList({ transactions, onDelete, selectedDate, 
                       <p style={{ fontSize: 13, color: "var(--text)", fontWeight: 500, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{t.title}</p>
                       <p style={{ fontSize: 11, color: "var(--muted)", marginTop: 1 }}>{t.category}</p>
                     </div>
-                    <span className="mono" style={{ fontSize: 13, fontWeight: 500, color: t.type === "income" ? "var(--green)" : "var(--red)", flexShrink: 0 }}>
+                    <span className="mono" style={{ fontSize: 13, fontWeight: 500, color: t.type === "income" ? "var(--green)" : t.type === "saving" ? "var(--accent)" : "var(--red)", flexShrink: 0 }}>
                       {t.type === "income" ? "+" : "-"}{fmt(t.amount)}
                     </span>
                     <button onClick={() => onEdit?.(t)} style={{
