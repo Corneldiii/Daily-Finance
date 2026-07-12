@@ -37,14 +37,19 @@ export interface Installment {
   id: string;
   name: string;
   totalAmount: number;
-  tenure: number;
+  tenure: number; // -1 = unlimited
   interestRate: number;
-  monthlyPayment: number;
   source: string;
   description: string;
   type: InstallmentType;
   startDate: string;
-  paidMonths: string[];
+}
+
+export interface InstallmentPayment {
+  id: string;
+  installmentId: string;
+  amount: number;
+  monthKey: string;
 }
 
 export interface MonthlyInstallmentSummary {

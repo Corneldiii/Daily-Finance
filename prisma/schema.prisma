@@ -36,3 +36,24 @@ model SavingGoal {
   deadline     String?
   createdAt    DateTime @default(now())
 }
+
+model Installment {
+  id            String   @id @default(cuid())
+  name          String
+  totalAmount   Float
+  tenure        Int      // -1 = unlimited
+  interestRate  Float    @default(0)
+  source        String
+  description   String   @default("")
+  type          String
+  startDate     String
+  createdAt     DateTime @default(now())
+}
+
+model InstallmentPayment {
+  id             String   @id @default(cuid())
+  installmentId  String
+  amount         Float
+  monthKey       String   // YYYY-MM
+  createdAt      DateTime @default(now())
+}

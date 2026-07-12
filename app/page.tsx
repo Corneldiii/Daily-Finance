@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, useRef } from "react";
-import { Transaction } from "@/types";
+import { Transaction, Installment, InstallmentPayment } from "@/types";
 import { exportToExcel } from "@/utils/excelExport";
 import Summary from "@/components/Summary";
 import BarChart from "@/components/BarChart";
@@ -16,6 +16,8 @@ import AddModal from "@/components/AddModal";
 
 export default function Home() {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [installments, setInstallments] = useState<Installment[]>([]);
+  const [installmentPayments, setInstallmentPayments] = useState<InstallmentPayment[]>([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
@@ -29,9 +31,15 @@ export default function Home() {
   const fetchTransactions = async () => {
     setLoading(true);
     try {
-      const res = await fetch("/api/transactions");
-      const data = await res.json();
-      setTransactions(data.transactions || []);
+      const [txRes, instRes] = await Promise.all([
+        fetch("/api/transactions"),
+        fetch("/api/installments"),
+      ]);
+      const txData = await txRes.json();
+      const instData = await instRes.json();
+      setTransactions(txData.transactions || []);
+      setInstallments(instData.installments || []);
+      setInstallmentPayments(instData.payments || []);
     } catch (err) {
       console.error(err);
     } finally {
@@ -128,12 +136,7 @@ export default function Home() {
   const monthLabel = new Date(`${month}-01`).toLocaleString("en-US", { month: "long", year: "numeric" });
 
   const handleExport = () => {
-    let installments: any[] = [];
-    try {
-      const saved = localStorage.getItem("finance_installments");
-      if (saved) installments = JSON.parse(saved);
-    } catch {}
-    exportToExcel(transactions, installments, month);
+    exportToExcel(transactions, installments, installmentPayments, month);
   };
 
   return (

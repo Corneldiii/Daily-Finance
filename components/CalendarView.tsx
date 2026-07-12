@@ -19,7 +19,7 @@ export default function CalendarView({ transactions, month, selectedDate, onDayC
 
   const dailyExpenses: Record<number, number> = {};
   transactions
-    .filter(t => t.date.startsWith(month) && t.type === "expense")
+    .filter(t => t.date.startsWith(month) && t.type === "expense" && t.category !== "Kos")
     .forEach(t => {
       const day = new Date(t.date).getDate();
       dailyExpenses[day] = (dailyExpenses[day] || 0) + t.amount;

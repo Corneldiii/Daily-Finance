@@ -33,6 +33,7 @@ export default function RecurringTransactions({ month }: Props) {
   const [type, setType] = useState<TransactionType>("expense");
   const [category, setCategory] = useState<Category>("Food");
   const [dayOfMonth, setDayOfMonth] = useState("1");
+  const [error, setError] = useState("");
 
   const fetchItems = async () => {
     try {
@@ -58,23 +59,33 @@ export default function RecurringTransactions({ month }: Props) {
 
   const addItem = async () => {
     if (!title.trim() || !amount) return;
-    await fetch("/api/recurring", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        title: title.trim(),
-        amount: Number(amount),
-        type,
-        category,
-        dayOfMonth: Math.min(Math.max(Number(dayOfMonth) || 1, 1), 28),
-        active: true,
-      }),
-    });
-    setTitle("");
-    setAmount("");
-    setAmountDisplay("");
-    setShowForm(false);
-    fetchItems();
+    setError("");
+    try {
+      const res = await fetch("/api/recurring", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          title: title.trim(),
+          amount: Number(amount),
+          type,
+          category,
+          dayOfMonth: Math.min(Math.max(Number(dayOfMonth) || 1, 1), 28),
+          active: true,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setError(data.error || "Failed to add recurring item");
+        return;
+      }
+      setTitle("");
+      setAmount("");
+      setAmountDisplay("");
+      setShowForm(false);
+      fetchItems();
+    } catch (err: any) {
+      setError(err.message || "Network error");
+    }
   };
 
   const toggleItem = async (item: RecurringItem) => {
@@ -173,6 +184,7 @@ export default function RecurringTransactions({ month }: Props) {
             color: "#fff", fontSize: 12, fontWeight: 500, cursor: "pointer",
             fontFamily: "Inter, sans-serif", opacity: !title.trim() || !amount ? 0.5 : 1,
           }}>Add Recurring</button>
+          {error && <p style={{ fontSize: 11, color: "var(--red)", marginTop: 4 }}>{error}</p>}
         </div>
       )}
 

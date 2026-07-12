@@ -26,6 +26,7 @@ export default function SavingsGoal({ transactions, month }: Props) {
   const [addingTo, setAddingTo] = useState<string | null>(null);
   const [addAmount, setAddAmount] = useState("");
   const [addAmountDisplay, setAddAmountDisplay] = useState("");
+  const [error, setError] = useState("");
 
   const fetchGoals = async () => {
     try {
@@ -57,23 +58,33 @@ export default function SavingsGoal({ transactions, month }: Props) {
 
   const addGoal = async () => {
     if (!name.trim() || !target) return;
-    await fetch("/api/savings-goals", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        name: name.trim(),
-        targetAmount: Number(target),
-        savedAmount: 0,
-        icon,
-        deadline: deadline || null,
-      }),
-    });
-    setName("");
-    setTarget("");
-    setTargetDisplay("");
-    setDeadline("");
-    setShowForm(false);
-    fetchGoals();
+    setError("");
+    try {
+      const res = await fetch("/api/savings-goals", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: name.trim(),
+          targetAmount: Number(target),
+          savedAmount: 0,
+          icon,
+          deadline: deadline || null,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setError(data.error || "Failed to create goal");
+        return;
+      }
+      setName("");
+      setTarget("");
+      setTargetDisplay("");
+      setDeadline("");
+      setShowForm(false);
+      fetchGoals();
+    } catch (err: any) {
+      setError(err.message || "Network error");
+    }
   };
 
   const removeGoal = async (id: string) => {
@@ -86,15 +97,25 @@ export default function SavingsGoal({ transactions, month }: Props) {
     if (!amount || amount <= 0) return;
     const goal = goals.find(g => g.id === id);
     if (!goal) return;
-    await fetch(`/api/savings-goals/${id}`, {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ ...goal, savedAmount: goal.savedAmount + amount }),
-    });
-    setAddingTo(null);
-    setAddAmount("");
-    setAddAmountDisplay("");
-    fetchGoals();
+    setError("");
+    try {
+      const res = await fetch(`/api/savings-goals/${id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ...goal, savedAmount: goal.savedAmount + amount }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setError(data.error || "Failed to add funds");
+        return;
+      }
+      setAddingTo(null);
+      setAddAmount("");
+      setAddAmountDisplay("");
+      fetchGoals();
+    } catch (err: any) {
+      setError(err.message || "Network error");
+    }
   };
 
   const autoSaveFromBalance = async () => {
@@ -186,6 +207,7 @@ export default function SavingsGoal({ transactions, month }: Props) {
             background: "var(--green)", color: "#fff", fontSize: 12, fontWeight: 500,
             cursor: "pointer", fontFamily: "Inter, sans-serif", opacity: !name.trim() || !target ? 0.5 : 1,
           }}>Create Goal</button>
+          {error && <p style={{ fontSize: 11, color: "var(--red)", marginTop: 4 }}>{error}</p>}
         </div>
       )}
 

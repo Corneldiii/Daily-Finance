@@ -6,6 +6,7 @@ interface Props { transactions: Transaction[]; carryOver?: number; currentMonth?
 export default function Summary({ transactions, carryOver = 0, currentMonth }: Props) {
   const income = transactions.filter(t => t.type === "income").reduce((s, t) => s + t.amount, 0);
   const expense = transactions.filter(t => t.type === "expense").reduce((s, t) => s + t.amount, 0);
+  const expenseExKos = transactions.filter(t => t.type === "expense" && t.category !== "Kos").reduce((s, t) => s + t.amount, 0);
   const saving = transactions.filter(t => t.type === "saving").reduce((s, t) => s + t.amount, 0);
   const balance = income - expense - saving;
   const savingsRate = income > 0 ? Math.round(((income - expense) / income) * 100) : 0;
@@ -15,9 +16,9 @@ export default function Summary({ transactions, carryOver = 0, currentMonth }: P
   const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
   const isCurrentMonth = currentMonth === `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
 
-  const expenseDays = transactions.filter(t => t.type === "expense" && t.date.startsWith(currentMonth || `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`)).reduce<Set<string>>((acc, t) => { acc.add(t.date); return acc; }, new Set());
+  const expenseDays = transactions.filter(t => t.type === "expense" && t.category !== "Kos" && t.date.startsWith(currentMonth || `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`)).reduce<Set<string>>((acc, t) => { acc.add(t.date); return acc; }, new Set());
   const activeDays = expenseDays.size;
-  const avgPerDay = activeDays > 0 ? Math.round(expense / activeDays) : 0;
+  const avgPerDay = activeDays > 0 ? Math.round(expenseExKos / activeDays) : 0;
   const daysLeft = isCurrentMonth ? daysInMonth - today : daysInMonth;
   const projectedDays = avgPerDay > 0 ? Math.floor(balance / avgPerDay) : (balance > 0 ? Infinity : 0);
 

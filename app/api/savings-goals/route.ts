@@ -7,18 +7,35 @@ export async function GET() {
     .select("*")
     .order("createdAt", { ascending: false });
 
-  if (error) return NextResponse.json({ error }, { status: 500 });
+  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   return NextResponse.json({ goals: data });
 }
 
 export async function POST(req: NextRequest) {
-  const body = await req.json();
-  const { data, error } = await supabase
-    .from("SavingGoal")
-    .insert([body])
-    .select()
-    .single();
+  try {
+    const body = await req.json();
 
-  if (error) return NextResponse.json({ error }, { status: 500 });
-  return NextResponse.json({ goal: data });
+    if (!body.name || !body.targetAmount) {
+      return NextResponse.json({ error: "Missing required fields: name, targetAmount" }, { status: 400 });
+    }
+
+    const insertData = {
+      name: body.name,
+      targetAmount: Number(body.targetAmount),
+      savedAmount: Number(body.savedAmount) || 0,
+      icon: body.icon || "🏖️",
+      deadline: body.deadline || null,
+    };
+
+    const { data, error } = await supabase
+      .from("SavingGoal")
+      .insert([insertData])
+      .select()
+      .single();
+
+    if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+    return NextResponse.json({ goal: data });
+  } catch (err: any) {
+    return NextResponse.json({ error: err.message || "Internal server error" }, { status: 500 });
+  }
 }
