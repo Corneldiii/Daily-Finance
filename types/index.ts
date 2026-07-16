@@ -1,4 +1,4 @@
-export type TransactionType = "income" | "expense" | "saving";
+export type TransactionType = "income" | "expense" | "saving" | "transfer" | "cash_withdrawal";
 
 export type Category =
   | "Food"
@@ -14,7 +14,9 @@ export type Category =
   | "Investment"
   | "Tabungan"
   | "Investasi"
-  | "Dana Darurat";
+  | "Dana Darurat"
+  | "E-Money"
+  | "Tarik Tunai";
 
 export interface Transaction {
   id: string;
@@ -57,4 +59,12 @@ export interface MonthlyInstallmentSummary {
   installments: { name: string; amount: number; description: string }[];
   totalAmount: number;
   remainingBalance: number;
+}
+
+export interface Balance {
+  id: string;
+  name: string;
+  amount: number;
+  createdAt: string;
+  updatedAt: string;
 }

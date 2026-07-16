@@ -22,6 +22,7 @@ const INCOME_CATS: Category[] = ["Salary", "Freelance", "Investment", "Other"];
 const ICONS: Record<string, string> = {
   Food: "🍜", Transport: "🚗", Shopping: "🛍️", Entertainment: "🎮",
   Bills: "🧾", Health: "💊", Kos: "🏠", Other: "📦", Salary: "💼", Freelance: "💻", Investment: "📈",
+  Tabungan: "🏦", "Dana Darurat": "🛡️", "E-Money": "💳", "Tarik Tunai": "🏧",
 };
 
 export default function RecurringTransactions({ month }: Props) {

@@ -7,7 +7,7 @@ interface Props { transactions: Transaction[]; onDelete: (id: string) => void; s
 const ICONS: Record<string, string> = {
   Food: "🍜", Transport: "🚗", Shopping: "🛍️", Entertainment: "🎮",
   Bills: "🧾", Health: "💊", Kos: "🏠", Other: "📦", Salary: "💼", Freelance: "💻", Investment: "📈",
-  Tabungan: "🏦", "Dana Darurat": "🛡️",
+  Tabungan: "🏦", "Dana Darurat": "🛡️", "E-Money": "💳", "Tarik Tunai": "🏧",
 };
 
 const EXPENSE_FILTERS = ["All", "Food", "Transport", "Shopping", "Entertainment", "Bills", "Health", "Kos", "Other"] as const;
@@ -116,7 +116,7 @@ export default function TransactionList({ transactions, onDelete, selectedDate, 
                   >
                     <div style={{
                       width: 36, height: 36, borderRadius: 10,
-                      background: t.type === "income" ? "var(--green-dim)" : t.type === "saving" ? "var(--accent-dim)" : "var(--surface2)",
+                      background: t.type === "income" ? "var(--green-dim)" : t.type === "saving" ? "var(--accent-dim)" : t.type === "transfer" ? "rgba(59,130,246,0.15)" : t.type === "cash_withdrawal" ? "rgba(245,158,11,0.15)" : "var(--surface2)",
                       display: "flex", alignItems: "center", justifyContent: "center",
                       fontSize: 16, flexShrink: 0,
                     }}>
@@ -126,8 +126,8 @@ export default function TransactionList({ transactions, onDelete, selectedDate, 
                       <p style={{ fontSize: 13, color: "var(--text)", fontWeight: 500, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{t.title}</p>
                       <p style={{ fontSize: 11, color: "var(--muted)", marginTop: 1 }}>{t.category}</p>
                     </div>
-                    <span className="mono" style={{ fontSize: 13, fontWeight: 500, color: t.type === "income" ? "var(--green)" : t.type === "saving" ? "var(--accent)" : "var(--red)", flexShrink: 0 }}>
-                      {t.type === "income" ? "+" : "-"}{fmt(t.amount)}
+                    <span className="mono" style={{ fontSize: 13, fontWeight: 500, color: t.type === "income" ? "var(--green)" : t.type === "saving" ? "var(--accent)" : t.type === "transfer" ? "#60a5fa" : t.type === "cash_withdrawal" ? "#fbbf24" : "var(--red)", flexShrink: 0 }}>
+                      {t.type === "income" ? "+" : t.type === "cash_withdrawal" ? "~" : "-"}{fmt(t.amount)}
                     </span>
                     <button onClick={() => onEdit?.(t)} style={{
                       background: "none", border: "none", cursor: "pointer",

@@ -7,17 +7,21 @@ interface Props { onClose: () => void; onAdd: (t: Omit<Transaction, "id">) => Pr
 const EXPENSE_CATS: Category[] = ["Food", "Transport", "Shopping", "Entertainment", "Bills", "Health", "Kos", "Other"];
 const INCOME_CATS: Category[] = ["Salary", "Freelance", "Investment", "Other"];
 const SAVING_CATS: Category[] = ["Tabungan", "Investasi", "Dana Darurat", "Other"];
+const TRANSFER_CATS: Category[] = ["E-Money", "Other"];
+const CASH_WITHDRAWAL_CATS: Category[] = ["Tarik Tunai", "Other"];
 
 const ICONS: Record<string, string> = {
   Food: "🍜", Transport: "🚗", Shopping: "🛍️", Entertainment: "🎮",
   Bills: "🧾", Health: "💊", Kos: "🏠", Other: "📦", Salary: "💼", Freelance: "💻", Investment: "📈",
-  Tabungan: "🏦", "Dana Darurat": "🛡️",
+  Tabungan: "🏦", "Dana Darurat": "🛡️", "E-Money": "💳", "Tarik Tunai": "🏧",
 };
 
 const TYPE_META: Record<string, { label: string; icon: string; color: string; colorDim: string }> = {
   expense: { label: "↑ Expense", icon: "↑", color: "var(--red)", colorDim: "var(--red-dim)" },
   income: { label: "↓ Income", icon: "↓", color: "var(--green)", colorDim: "var(--green-dim)" },
   saving: { label: "💰 Saving", icon: "💰", color: "var(--accent)", colorDim: "var(--accent-dim)" },
+  transfer: { label: "🔄 Transfer", icon: "🔄", color: "#3b82f6", colorDim: "rgba(59,130,246,0.15)" },
+  cash_withdrawal: { label: "🏧 Tarik Tunai", icon: "🏧", color: "#f59e0b", colorDim: "rgba(245,158,11,0.15)" },
 };
 
 const formatRupiah = (val: string): string => {
@@ -35,13 +39,17 @@ export default function AddModal({ onClose, onAdd, editData, onEdit }: Props) {
   const [date, setDate] = useState(editData?.date || new Date().toISOString().split("T")[0]);
   const [loading, setLoading] = useState(false);
 
-  const cats = type === "expense" ? EXPENSE_CATS : type === "saving" ? SAVING_CATS : INCOME_CATS;
+  const cats = type === "expense" ? EXPENSE_CATS : type === "saving" ? SAVING_CATS : type === "transfer" ? TRANSFER_CATS : type === "cash_withdrawal" ? CASH_WITHDRAWAL_CATS : INCOME_CATS;
   const meta = TYPE_META[type];
+
+  const allTypes: TransactionType[] = ["expense", "income", "saving", "transfer", "cash_withdrawal"];
 
   const handleType = (t: TransactionType) => {
     setType(t);
     if (t === "expense") setCategory("Food");
     else if (t === "saving") setCategory("Tabungan");
+    else if (t === "transfer") setCategory("E-Money");
+    else if (t === "cash_withdrawal") setCategory("Tarik Tunai");
     else setCategory("Salary");
   };
 
@@ -69,6 +77,14 @@ export default function AddModal({ onClose, onAdd, editData, onEdit }: Props) {
     outline: "none", fontFamily: "Inter, sans-serif",
   };
 
+  const typeLabels: Record<string, string> = {
+    expense: "↑ Expense",
+    income: "↓ Income",
+    saving: "💰 Saving",
+    transfer: "🔄 Transfer",
+    cash_withdrawal: "🏧 Tarik Tunai",
+  };
+
   return (
     <div style={{
       position: "fixed", inset: 0, background: "rgba(0,0,0,0.75)",
@@ -82,6 +98,7 @@ export default function AddModal({ onClose, onAdd, editData, onEdit }: Props) {
         borderRadius: "20px 20px 20px 20px", width: "100%", maxWidth: 480,
         padding: "24px 24px 40px",
         animation: "slideUp 0.25s ease",
+        maxHeight: "90vh", overflowY: "auto",
       }}>
         <style>{`@keyframes slideUp { from { transform: translateY(100%) } to { transform: translateY(0) } }`}</style>
 
@@ -92,30 +109,82 @@ export default function AddModal({ onClose, onAdd, editData, onEdit }: Props) {
           <button onClick={onClose} style={{ background: "none", border: "none", color: "var(--muted)", cursor: "pointer", fontSize: 16 }}>✕</button>
         </div>
 
-        <div style={{ display: "flex", gap: 6, background: "var(--surface2)", padding: 4, borderRadius: 12, marginBottom: 20 }}>
-          {(["expense", "income", "saving"] as TransactionType[]).map(t => (
+        <div style={{ display: "flex", gap: 4, background: "var(--surface2)", padding: 4, borderRadius: 12, marginBottom: 20, flexWrap: "wrap" }}>
+          {allTypes.map(t => (
             <button key={t} onClick={() => handleType(t)} style={{
-              flex: 1, padding: "8px 0", borderRadius: 8, border: "none", cursor: "pointer",
-              fontSize: 12, fontWeight: 500, fontFamily: "Inter, sans-serif",
+              flex: "1 1 auto", minWidth: 70, padding: "8px 6px", borderRadius: 8, border: "none", cursor: "pointer",
+              fontSize: 11, fontWeight: 500, fontFamily: "Inter, sans-serif",
               background: type === t ? TYPE_META[t].color : "transparent",
               color: type === t ? "#fff" : "var(--muted)",
               transition: "all 0.2s",
             }}>
-              {TYPE_META[t].label}
+              {typeLabels[t]}
             </button>
           ))}
         </div>
 
+        {type === "transfer" && (
+          <div style={{
+            background: "rgba(59,130,246,0.1)", border: "1px solid rgba(59,130,246,0.3)",
+            borderRadius: 10, padding: "10px 14px", marginBottom: 16, fontSize: 12, color: "#93c5fd",
+          }}>
+            Transfer ke E-Money: Net balance berkurang, saldo E-Money bertambah
+          </div>
+        )}
+
+        {type === "cash_withdrawal" && (
+          <div style={{
+            background: "rgba(245,158,11,0.1)", border: "1px solid rgba(245,158,11,0.3)",
+            borderRadius: 10, padding: "10px 14px", marginBottom: 16, fontSize: 12, color: "#fbbf24",
+          }}>
+            Tarik Tunai: Hanya log, tidak mengurangi net balance
+          </div>
+        )}
+
         <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
           <div>
             <label style={{ fontSize: 11, color: "var(--muted)", display: "block", marginBottom: 6, textTransform: "uppercase", letterSpacing: "0.08em" }}>Title</label>
-            <input value={title} onChange={e => setTitle(e.target.value)} placeholder="e.g. Lunch, Salary, Tabungan..." style={inputStyle} />
+            <input value={title} onChange={e => setTitle(e.target.value)} placeholder={
+              type === "transfer" ? "e.g. Transfer GoPay, Transfer OVO..." :
+              type === "cash_withdrawal" ? "e.g. Tarik Tunai ATM..." :
+              "e.g. Lunch, Salary, Tabungan..."
+            } style={inputStyle} />
             {type === "expense" && (
               <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginTop: 8 }}>
                 {["Makan Siang", "Makan Malam", "Laundry", "Listrik", "Belanja Bulanan"].map(t => (
                   <button key={t} onClick={() => setTitle(t)} style={{
                     padding: "5px 10px", borderRadius: 20, border: "1px solid var(--border)",
                     background: title === t ? "var(--red-dim)" : "transparent",
+                    color: title === t ? "var(--text)" : "var(--muted)",
+                    fontSize: 11, cursor: "pointer", fontFamily: "Inter, sans-serif",
+                    transition: "all 0.15s",
+                  }}>
+                    {t}
+                  </button>
+                ))}
+              </div>
+            )}
+            {type === "transfer" && (
+              <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginTop: 8 }}>
+                {["Transfer GoPay", "Transfer OVO", "Transfer DANA", "Transfer ShopeePay", "Transfer Moota"].map(t => (
+                  <button key={t} onClick={() => setTitle(t)} style={{
+                    padding: "5px 10px", borderRadius: 20, border: "1px solid var(--border)",
+                    background: title === t ? "rgba(59,130,246,0.15)" : "transparent",
+                    color: title === t ? "var(--text)" : "var(--muted)",
+                    fontSize: 11, cursor: "pointer", fontFamily: "Inter, sans-serif",
+                    transition: "all 0.15s",
+                  }}>
+                    {t}
+                  </button>
+                ))}
+              </div>
+            )}
+            {type === "cash_withdrawal" && (
+              <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginTop: 8 }}>
+                {["Tarik Tunai ATM", "Tarik Tunai Indomaret", "Tarik Tunai Alfamart"].map(t => (
+                  <button key={t} onClick={() => setTitle(t)} style={{
+                    padding: "5px 10px", borderRadius: 20, border: "1px solid var(--border)",
+                    background: title === t ? "rgba(245,158,11,0.15)" : "transparent",
                     color: title === t ? "var(--text)" : "var(--muted)",
                     fontSize: 11, cursor: "pointer", fontFamily: "Inter, sans-serif",
                     transition: "all 0.15s",
@@ -202,7 +271,10 @@ export default function AddModal({ onClose, onAdd, editData, onEdit }: Props) {
           fontFamily: "Inter, sans-serif", opacity: loading || !title || !amount ? 0.5 : 1,
           transition: "opacity 0.2s",
         }}>
-          {loading ? "Saving..." : editData ? "Save Changes" : type === "saving" ? "Add Saving" : `Add ${type === "expense" ? "Expense" : "Income"}`}
+          {loading ? "Saving..." : editData ? "Save Changes" :
+           type === "transfer" ? "Add Transfer" :
+           type === "cash_withdrawal" ? "Add Tarik Tunai" :
+           type === "saving" ? "Add Saving" : `Add ${type === "expense" ? "Expense" : "Income"}`}
         </button>
       </div>
     </div>

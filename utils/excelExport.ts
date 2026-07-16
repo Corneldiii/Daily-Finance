@@ -63,6 +63,9 @@ export function exportToExcel(
   const expense = monthTxs
     .filter((t) => t.type === "expense")
     .reduce((s, t) => s + t.amount, 0);
+  const transfer = monthTxs
+    .filter((t) => t.type === "transfer")
+    .reduce((s, t) => s + t.amount, 0);
 
   txData.push({} as any);
   txData.push({
@@ -74,8 +77,12 @@ export function exportToExcel(
     Amount: expense, "Amount (Formatted)": fmt(expense),
   } as any);
   txData.push({
+    Date: "", Title: "TOTAL TRANSFER", Category: "", Type: "transfer",
+    Amount: transfer, "Amount (Formatted)": fmt(transfer),
+  } as any);
+  txData.push({
     Date: "", Title: "NET BALANCE", Category: "", Type: "",
-    Amount: income - expense, "Amount (Formatted)": fmt(income - expense),
+    Amount: income - expense - transfer, "Amount (Formatted)": fmt(income - expense - transfer),
   } as any);
 
   const txSheet = XLSX.utils.json_to_sheet(txData);
@@ -169,14 +176,15 @@ export function exportToExcel(
     { Metric: "Month", Value: monthLabel },
     { Metric: "Total Income", Value: fmt(income) },
     { Metric: "Total Expenses", Value: fmt(expense) },
-    { Metric: "Net Balance", Value: fmt(income - expense) },
+    { Metric: "Total Transfer", Value: fmt(transfer) },
+    { Metric: "Net Balance", Value: fmt(income - expense - transfer) },
     { Metric: "", Value: "" },
     { Metric: "Active Installments", Value: installments.length },
     { Metric: "Monthly Installment Total", Value: fmt(totalMonthlyActive) },
     { Metric: "Remaining Installment Balance", Value: fmt(totalRemaining) },
     { Metric: "", Value: "" },
-    { Metric: "Total Outflow (Expenses + Installments)", Value: fmt(expense + totalMonthlyActive) },
-    { Metric: "Net After Installments", Value: fmt(income - expense - totalMonthlyActive) },
+    { Metric: "Total Outflow (Expenses + Transfer + Installments)", Value: fmt(expense + transfer + totalMonthlyActive) },
+    { Metric: "Net After Installments", Value: fmt(income - expense - transfer - totalMonthlyActive) },
   ];
 
   const summarySheet = XLSX.utils.json_to_sheet(summaryData);

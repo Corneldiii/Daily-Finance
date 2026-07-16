@@ -13,6 +13,7 @@ import SavingsGoal from "@/components/SavingsGoal";
 import MonthlyComparison from "@/components/MonthlyComparison";
 import TransactionList from "@/components/TransactionList";
 import AddModal from "@/components/AddModal";
+import TransportScheduler from "@/components/TransportScheduler";
 
 export default function Home() {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
@@ -61,6 +62,15 @@ export default function Home() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(t),
     });
+
+    if (t.type === "transfer" && t.category === "E-Money") {
+      await fetch("/api/balances/E-Money", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ delta: t.amount }),
+      });
+    }
+
     fetchTransactions();
   };
 
@@ -97,7 +107,8 @@ export default function Home() {
     const income = txs.filter(t => t.type === "income").reduce((s, t) => s + t.amount, 0);
     const expense = txs.filter(t => t.type === "expense").reduce((s, t) => s + t.amount, 0);
     const saving = txs.filter(t => t.type === "saving").reduce((s, t) => s + t.amount, 0);
-    return income - expense - saving;
+    const transfer = txs.filter(t => t.type === "transfer").reduce((s, t) => s + t.amount, 0);
+    return income - expense - saving - transfer;
   };
 
   const carryOverBalances = (() => {
@@ -204,6 +215,7 @@ export default function Home() {
         ) : (
           <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
             <Summary transactions={adjustedFiltered} carryOver={carryOverBalances} currentMonth={month} />
+            <TransportScheduler />
             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))", gap: 16 }}>
               <BarChart transactions={transactions} month={month} />
               <CategoryList transactions={adjustedFiltered} />
