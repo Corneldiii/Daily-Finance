@@ -2,11 +2,17 @@ import { NextRequest, NextResponse } from "next/server";
 import { supabase } from "@/lib/supabase";
 
 const TRANSPORT_AMOUNT = 3500;
+const WIB_OFFSET = 7 * 60 * 60 * 1000;
+
+function getWIBDate(): Date {
+  const utc = Date.now();
+  return new Date(utc + WIB_OFFSET);
+}
 
 export async function POST(req: NextRequest) {
   try {
-    const today = new Date();
-    const dayOfWeek = today.getDay();
+    const wibNow = getWIBDate();
+    const dayOfWeek = wibNow.getUTCDay();
     const isWeekday = dayOfWeek >= 1 && dayOfWeek <= 5;
 
     if (!isWeekday) {
@@ -17,16 +23,15 @@ export async function POST(req: NextRequest) {
       });
     }
 
-    const now = new Date();
-    const hours = now.getHours();
-    if (hours < 8) {
+    const hours = wibNow.getUTCHours();
+    if (hours !== 8) {
       return NextResponse.json({
         success: false,
-        message: "Before 8 AM, skipping deduction",
+        message: "Not 8 AM, skipping deduction",
       });
     }
 
-    const dateStr = today.toISOString().split("T")[0];
+    const dateStr = wibNow.toISOString().split("T")[0];
 
     const { data: existingTx } = await supabase
       .from("Transaction")
@@ -89,9 +94,9 @@ export async function POST(req: NextRequest) {
 }
 
 export async function GET() {
-  const today = new Date();
-  const dateStr = today.toISOString().split("T")[0];
-  const dayOfWeek = today.getDay();
+  const wibNow = getWIBDate();
+  const dateStr = wibNow.toISOString().split("T")[0];
+  const dayOfWeek = wibNow.getUTCDay();
 
   const { data: todayTx } = await supabase
     .from("Transaction")

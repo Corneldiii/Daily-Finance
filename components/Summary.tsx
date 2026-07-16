@@ -15,8 +15,8 @@ export default function Summary({ transactions, carryOver = 0, currentMonth }: P
   }, []);
 
   const income = transactions.filter(t => t.type === "income").reduce((s, t) => s + t.amount, 0);
-  const expense = transactions.filter(t => t.type === "expense").reduce((s, t) => s + t.amount, 0);
-  const expenseExKos = transactions.filter(t => t.type === "expense" && t.category !== "Kos").reduce((s, t) => s + t.amount, 0);
+  const expense = transactions.filter(t => t.type === "expense" && t.title !== "Transport Auto-Deduction").reduce((s, t) => s + t.amount, 0);
+  const expenseExKos = transactions.filter(t => t.type === "expense" && t.category !== "Kos" && t.title !== "Transport Auto-Deduction").reduce((s, t) => s + t.amount, 0);
   const saving = transactions.filter(t => t.type === "saving").reduce((s, t) => s + t.amount, 0);
   const transfer = transactions.filter(t => t.type === "transfer").reduce((s, t) => s + t.amount, 0);
   const balance = income - expense - saving - transfer;

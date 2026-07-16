@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 
 const CHECK_INTERVAL = 60 * 1000;
 
@@ -8,6 +8,7 @@ export default function TransportScheduler() {
   const [lastCheck, setLastCheck] = useState<string>("");
   const [lastResult, setLastResult] = useState<string>("");
   const [nextDeduction, setNextDeduction] = useState<string>("");
+  const settledRef = useRef(false);
 
   const calculateNextDeduction = useCallback(() => {
     const now = new Date();
@@ -39,11 +40,13 @@ export default function TransportScheduler() {
   }, []);
 
   const checkAndDeduct = useCallback(async () => {
+    if (settledRef.current) return;
+
     const now = new Date();
     const day = now.getDay();
     const isWeekday = day >= 1 && day <= 5;
 
-    if (!isWeekday || now.getHours() < 8) {
+    if (!isWeekday || now.getHours() !== 8) {
       setStatus("skipped");
       setLastCheck(now.toLocaleTimeString("en-US"));
       setNextDeduction(calculateNextDeduction());
@@ -64,9 +67,11 @@ export default function TransportScheduler() {
         setStatus("deducted");
         setLastResult(`Deduced Rp 3.500 - Balance: Rp ${(data.newBalance || 0).toLocaleString("id-ID")}`);
         window.dispatchEvent(new Event("balance-updated"));
+        settledRef.current = true;
       } else if (data.message === "Already deducted today") {
         setStatus("deducted");
         setLastResult("Already deducted today");
+        settledRef.current = true;
       } else {
         setStatus("skipped");
         setLastResult(data.message || "Skipped");
@@ -81,7 +86,11 @@ export default function TransportScheduler() {
 
   useEffect(() => {
     checkAndDeduct();
-    const interval = setInterval(checkAndDeduct, CHECK_INTERVAL);
+    const interval = setInterval(() => {
+      if (!settledRef.current) {
+        checkAndDeduct();
+      }
+    }, CHECK_INTERVAL);
     return () => clearInterval(interval);
   }, [checkAndDeduct]);
 
