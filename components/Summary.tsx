@@ -7,16 +7,23 @@ interface Props { transactions: Transaction[]; carryOver?: number; currentMonth?
 export default function Summary({ transactions, carryOver = 0, currentMonth }: Props) {
   const [eMoneyBalance, setEMoneyBalance] = useState(0);
 
-  useEffect(() => {
+  const fetchBalance = () => {
     fetch("/api/balances/E-Money")
       .then(r => r.json())
       .then(d => setEMoneyBalance(d.balance?.amount || 0))
       .catch(() => {});
+  };
+
+  useEffect(() => {
+    fetchBalance();
+    const onBalanceUpdated = () => fetchBalance();
+    window.addEventListener("balance-updated", onBalanceUpdated);
+    return () => window.removeEventListener("balance-updated", onBalanceUpdated);
   }, []);
 
   const income = transactions.filter(t => t.type === "income").reduce((s, t) => s + t.amount, 0);
-  const expense = transactions.filter(t => t.type === "expense" && t.title !== "Transport Auto-Deduction").reduce((s, t) => s + t.amount, 0);
-  const expenseExKos = transactions.filter(t => t.type === "expense" && t.category !== "Kos" && t.title !== "Transport Auto-Deduction").reduce((s, t) => s + t.amount, 0);
+  const expense = transactions.filter(t => t.type === "expense" && t.title !== "Transport Auto-Deduction" && t.category !== "Pakai E-Money").reduce((s, t) => s + t.amount, 0);
+  const expenseExKos = transactions.filter(t => t.type === "expense" && t.category !== "Kos" && t.title !== "Transport Auto-Deduction" && t.category !== "Pakai E-Money").reduce((s, t) => s + t.amount, 0);
   const saving = transactions.filter(t => t.type === "saving").reduce((s, t) => s + t.amount, 0);
   const transfer = transactions.filter(t => t.type === "transfer").reduce((s, t) => s + t.amount, 0);
   const balance = income - expense - saving - transfer;
@@ -27,7 +34,7 @@ export default function Summary({ transactions, carryOver = 0, currentMonth }: P
   const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
   const isCurrentMonth = currentMonth === `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
 
-  const expenseDays = transactions.filter(t => t.type === "expense" && t.category !== "Kos" && t.date.startsWith(currentMonth || `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`)).reduce<Set<string>>((acc, t) => { acc.add(t.date); return acc; }, new Set());
+  const expenseDays = transactions.filter(t => t.type === "expense" && t.category !== "Kos" && t.category !== "Pakai E-Money" && t.date.startsWith(currentMonth || `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`)).reduce<Set<string>>((acc, t) => { acc.add(t.date); return acc; }, new Set());
   const activeDays = expenseDays.size;
   const avgPerDay = activeDays > 0 ? Math.round(expenseExKos / activeDays) : 0;
   const daysLeft = isCurrentMonth ? daysInMonth - today : daysInMonth;
@@ -95,7 +102,7 @@ export default function Summary({ transactions, carryOver = 0, currentMonth }: P
             <span style={{ fontSize: 9, background: "var(--red-dim)", color: "var(--red)", padding: "2px 6px", borderRadius: 12 }}>OUT</span>
           </div>
           <p className="mono" style={{ fontSize: 18, fontWeight: 500, color: "var(--red)" }}>{fmt(expense)}</p>
-          <p style={{ fontSize: 11, color: "var(--muted)", marginTop: 4 }}>{transactions.filter(t => t.type === "expense").length} transactions</p>
+          <p style={{ fontSize: 11, color: "var(--muted)", marginTop: 4 }}>{transactions.filter(t => t.type === "expense" && t.category !== "Pakai E-Money").length} transactions</p>
         </div>
 
         <div style={{ background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 12, padding: "14px 16px" }}>

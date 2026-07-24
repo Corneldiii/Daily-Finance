@@ -4,7 +4,7 @@ import { Category, Transaction, TransactionType } from "@/types";
 
 interface Props { onClose: () => void; onAdd: (t: Omit<Transaction, "id">) => Promise<void>; editData?: Transaction | null; onEdit?: (id: string, t: Omit<Transaction, "id">) => Promise<void> }
 
-const EXPENSE_CATS: Category[] = ["Food", "Transport", "Shopping", "Entertainment", "Bills", "Health", "Kos", "Other"];
+const EXPENSE_CATS: Category[] = ["Food", "Transport", "Shopping", "Entertainment", "Bills", "Health", "Kos", "Pakai E-Money", "Other"];
 const INCOME_CATS: Category[] = ["Salary", "Freelance", "Investment", "Other"];
 const SAVING_CATS: Category[] = ["Tabungan", "Investasi", "Dana Darurat", "Other"];
 const TRANSFER_CATS: Category[] = ["E-Money", "Other"];
@@ -13,7 +13,7 @@ const CASH_WITHDRAWAL_CATS: Category[] = ["Tarik Tunai", "Other"];
 const ICONS: Record<string, string> = {
   Food: "🍜", Transport: "🚗", Shopping: "🛍️", Entertainment: "🎮",
   Bills: "🧾", Health: "💊", Kos: "🏠", Other: "📦", Salary: "💼", Freelance: "💻", Investment: "📈",
-  Tabungan: "🏦", "Dana Darurat": "🛡️", "E-Money": "💳", "Tarik Tunai": "🏧",
+  Tabungan: "🏦", "Dana Darurat": "🛡️", "E-Money": "💳", "Pakai E-Money": "💳", "Tarik Tunai": "🏧",
 };
 
 const TYPE_META: Record<string, { label: string; icon: string; color: string; colorDim: string }> = {
@@ -132,6 +132,15 @@ export default function AddModal({ onClose, onAdd, editData, onEdit }: Props) {
           </div>
         )}
 
+        {type === "expense" && category === "Pakai E-Money" && (
+          <div style={{
+            background: "rgba(245,158,11,0.1)", border: "1px solid rgba(245,158,11,0.3)",
+            borderRadius: 10, padding: "10px 14px", marginBottom: 16, fontSize: 12, color: "#fbbf24",
+          }}>
+            Pakai E-Money: Saldo E-Money berkurang, net balance tetap
+          </div>
+        )}
+
         {type === "cash_withdrawal" && (
           <div style={{
             background: "rgba(245,158,11,0.1)", border: "1px solid rgba(245,158,11,0.3)",
@@ -170,6 +179,21 @@ export default function AddModal({ onClose, onAdd, editData, onEdit }: Props) {
                   <button key={t} onClick={() => setTitle(t)} style={{
                     padding: "5px 10px", borderRadius: 20, border: "1px solid var(--border)",
                     background: title === t ? "rgba(59,130,246,0.15)" : "transparent",
+                    color: title === t ? "var(--text)" : "var(--muted)",
+                    fontSize: 11, cursor: "pointer", fontFamily: "Inter, sans-serif",
+                    transition: "all 0.15s",
+                  }}>
+                    {t}
+                  </button>
+                ))}
+              </div>
+            )}
+            {type === "expense" && category === "Pakai E-Money" && (
+              <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginTop: 8 }}>
+                {["Bayar Transport", "Bayar Tol", "Beli Makan", "Belanja Mini Market", "Lainnya"].map(t => (
+                  <button key={t} onClick={() => setTitle(t)} style={{
+                    padding: "5px 10px", borderRadius: 20, border: "1px solid var(--border)",
+                    background: title === t ? "rgba(245,158,11,0.15)" : "transparent",
                     color: title === t ? "var(--text)" : "var(--muted)",
                     fontSize: 11, cursor: "pointer", fontFamily: "Inter, sans-serif",
                     transition: "all 0.15s",

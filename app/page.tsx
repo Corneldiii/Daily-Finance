@@ -56,6 +56,21 @@ export default function Home() {
     }
   }, [selectedDate]);
 
+  const isEMoneyTransfer = (type: string, category: string) =>
+    type === "transfer" && category === "E-Money";
+
+  const isEMoneyExpense = (type: string, category: string) =>
+    type === "expense" && category === "Pakai E-Money";
+
+  const updateEMoneyBalance = async (delta: number) => {
+    await fetch("/api/balances/E-Money", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ delta }),
+    });
+    window.dispatchEvent(new Event("balance-updated"));
+  };
+
   const handleAdd = async (t: Omit<Transaction, "id">) => {
     await fetch("/api/transactions", {
       method: "POST",
@@ -63,28 +78,59 @@ export default function Home() {
       body: JSON.stringify(t),
     });
 
-    if (t.type === "transfer" && t.category === "E-Money") {
-      await fetch("/api/balances/E-Money", {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ delta: t.amount }),
-      });
+    if (isEMoneyTransfer(t.type, t.category)) {
+      await updateEMoneyBalance(t.amount);
+    } else if (isEMoneyExpense(t.type, t.category)) {
+      await updateEMoneyBalance(-t.amount);
     }
 
     fetchTransactions();
   };
 
   const handleDelete = async (id: string) => {
+    const tx = transactions.find(t => t.id === id);
     await fetch(`/api/transactions/${id}`, { method: "DELETE" });
+
+    if (tx && isEMoneyTransfer(tx.type, tx.category)) {
+      await updateEMoneyBalance(-tx.amount);
+    } else if (tx && isEMoneyExpense(tx.type, tx.category)) {
+      await updateEMoneyBalance(tx.amount);
+    }
+
     fetchTransactions();
   };
 
   const handleEdit = async (id: string, t: Omit<Transaction, "id">) => {
+    const oldTx = transactions.find(tx => tx.id === id);
     await fetch(`/api/transactions/${id}`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(t),
     });
+
+    if (oldTx) {
+      const wasTransfer = isEMoneyTransfer(oldTx.type, oldTx.category);
+      const wasPakai = isEMoneyExpense(oldTx.type, oldTx.category);
+      const isNowTransfer = isEMoneyTransfer(t.type, t.category);
+      const isNowPakai = isEMoneyExpense(t.type, t.category);
+
+      if (wasTransfer && isNowTransfer) {
+        const delta = t.amount - oldTx.amount;
+        if (delta !== 0) await updateEMoneyBalance(delta);
+      } else if (wasPakai && isNowPakai) {
+        const delta = oldTx.amount - t.amount;
+        if (delta !== 0) await updateEMoneyBalance(delta);
+      } else if (wasTransfer && !isNowTransfer) {
+        await updateEMoneyBalance(-oldTx.amount);
+      } else if (wasPakai && !isNowPakai) {
+        await updateEMoneyBalance(oldTx.amount);
+      } else if (!wasTransfer && isNowTransfer) {
+        await updateEMoneyBalance(t.amount);
+      } else if (!wasPakai && isNowPakai) {
+        await updateEMoneyBalance(-t.amount);
+      }
+    }
+
     fetchTransactions();
   };
 
@@ -105,7 +151,7 @@ export default function Home() {
   const getNetBalance = (monthKey: string) => {
     const txs = transactions.filter(t => t.date.startsWith(monthKey));
     const income = txs.filter(t => t.type === "income").reduce((s, t) => s + t.amount, 0);
-    const expense = txs.filter(t => t.type === "expense").reduce((s, t) => s + t.amount, 0);
+    const expense = txs.filter(t => t.type === "expense" && t.category !== "Pakai E-Money").reduce((s, t) => s + t.amount, 0);
     const saving = txs.filter(t => t.type === "saving").reduce((s, t) => s + t.amount, 0);
     const transfer = txs.filter(t => t.type === "transfer").reduce((s, t) => s + t.amount, 0);
     return income - expense - saving - transfer;

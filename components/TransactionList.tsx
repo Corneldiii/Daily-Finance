@@ -7,7 +7,7 @@ interface Props { transactions: Transaction[]; onDelete: (id: string) => void; s
 const ICONS: Record<string, string> = {
   Food: "🍜", Transport: "🚗", Shopping: "🛍️", Entertainment: "🎮",
   Bills: "🧾", Health: "💊", Kos: "🏠", Other: "📦", Salary: "💼", Freelance: "💻", Investment: "📈",
-  Tabungan: "🏦", "Dana Darurat": "🛡️", "E-Money": "💳", "Tarik Tunai": "🏧",
+  Tabungan: "🏦", "Dana Darurat": "🛡️", "E-Money": "💳", "Pakai E-Money": "💳", "Tarik Tunai": "🏧",
 };
 
 const EXPENSE_FILTERS = ["All", "Food", "Transport", "Shopping", "Entertainment", "Bills", "Health", "Kos", "Other"] as const;

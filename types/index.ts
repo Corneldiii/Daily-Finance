@@ -16,6 +16,7 @@ export type Category =
   | "Investasi"
   | "Dana Darurat"
   | "E-Money"
+  | "Pakai E-Money"
   | "Tarik Tunai";
 
 export interface Transaction {

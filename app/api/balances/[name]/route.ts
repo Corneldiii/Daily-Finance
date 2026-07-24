@@ -35,9 +35,10 @@ export async function PUT(
     .single();
 
   if (!existing) {
+    const initialAmount = body.delta !== undefined ? Number(body.delta) : Number(amount);
     const { data, error } = await supabase
       .from("Balance")
-      .insert([{ name, amount: Number(amount) }])
+      .insert([{ name, amount: initialAmount }])
       .select()
       .single();
 
