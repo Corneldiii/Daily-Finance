@@ -24,8 +24,8 @@ export async function PUT(
   const body = await req.json();
   const { amount } = body;
 
-  if (amount === undefined) {
-    return NextResponse.json({ error: "Missing required field: amount" }, { status: 400 });
+  if (amount === undefined && body.delta === undefined) {
+    return NextResponse.json({ error: "Missing required field: amount or delta" }, { status: 400 });
   }
 
   const { data: existing } = await supabase
