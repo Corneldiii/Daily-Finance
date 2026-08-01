@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { Transaction } from "@/types";
+import { localDateKey } from "@/utils/date";
 
 interface Props {
   transactions: Transaction[];
@@ -40,7 +41,7 @@ export default function BarChart({ transactions, month }: Props) {
   }).format(n);
 
   const today = new Date();
-  const todayKey = today.toISOString().split("T")[0];
+  const todayKey = localDateKey();
   const currentMonth = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}`;
   const nextMonth = new Date(today.getFullYear(), today.getMonth() + 1, 1);
   const daysLeft = Math.ceil(

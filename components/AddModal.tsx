@@ -1,6 +1,7 @@
 "use client";
 import { useState } from "react";
 import { Category, Transaction, TransactionType } from "@/types";
+import { localDateKey } from "@/utils/date";
 
 interface Props { onClose: () => void; onAdd: (t: Omit<Transaction, "id">) => Promise<void>; editData?: Transaction | null; onEdit?: (id: string, t: Omit<Transaction, "id">) => Promise<void> }
 
@@ -36,7 +37,7 @@ export default function AddModal({ onClose, onAdd, editData, onEdit }: Props) {
   const [amount, setAmount] = useState(editData ? String(editData.amount) : "");
   const [amountDisplay, setAmountDisplay] = useState(editData ? formatRupiah(String(editData.amount)) : "");
   const [category, setCategory] = useState<Category>(editData?.category || "Food");
-  const [date, setDate] = useState(editData?.date || new Date().toISOString().split("T")[0]);
+  const [date, setDate] = useState(editData?.date || localDateKey());
   const [loading, setLoading] = useState(false);
 
   const cats = type === "expense" ? EXPENSE_CATS : type === "saving" ? SAVING_CATS : type === "transfer" ? TRANSFER_CATS : type === "cash_withdrawal" ? CASH_WITHDRAWAL_CATS : INCOME_CATS;
