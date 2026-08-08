@@ -15,6 +15,8 @@ import TransactionList from "@/components/TransactionList";
 import AddModal from "@/components/AddModal";
 import TransportScheduler from "@/components/TransportScheduler";
 
+const SKIP_DAY_TITLE = "Transport Skip Day";
+
 export default function Home() {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [installments, setInstallments] = useState<Installment[]>([]);
@@ -38,7 +40,7 @@ export default function Home() {
       ]);
       const txData = await txRes.json();
       const instData = await instRes.json();
-      setTransactions(txData.transactions || []);
+      setTransactions((txData.transactions || []).filter((t: Transaction) => t.title !== SKIP_DAY_TITLE));
       setInstallments(instData.installments || []);
       setInstallmentPayments(instData.payments || []);
     } catch (err) {
@@ -62,6 +64,11 @@ export default function Home() {
   const isEMoneyExpense = (type: string, category: string) =>
     type === "expense" && category === "Pakai E-Money";
 
+  const E_MONEY_ADMIN_FEE = 1500;
+
+  const eMoneyInjected = (t: { type: string; category: string; amount: number; adminFee?: boolean }) =>
+    isEMoneyTransfer(t.type, t.category) ? (t.adminFee ? t.amount - E_MONEY_ADMIN_FEE : t.amount) : 0;
+
   const updateEMoneyBalance = async (delta: number) => {
     await fetch("/api/balances/E-Money", {
       method: "PUT",
@@ -78,8 +85,9 @@ export default function Home() {
       body: JSON.stringify(t),
     });
 
-    if (isEMoneyTransfer(t.type, t.category)) {
-      await updateEMoneyBalance(t.amount);
+    const injected = eMoneyInjected(t);
+    if (injected > 0) {
+      await updateEMoneyBalance(injected);
     } else if (isEMoneyExpense(t.type, t.category)) {
       await updateEMoneyBalance(-t.amount);
     }
@@ -91,10 +99,13 @@ export default function Home() {
     const tx = transactions.find(t => t.id === id);
     await fetch(`/api/transactions/${id}`, { method: "DELETE" });
 
-    if (tx && isEMoneyTransfer(tx.type, tx.category)) {
-      await updateEMoneyBalance(-tx.amount);
-    } else if (tx && isEMoneyExpense(tx.type, tx.category)) {
-      await updateEMoneyBalance(tx.amount);
+    if (tx) {
+      const injected = eMoneyInjected(tx);
+      if (injected > 0) {
+        await updateEMoneyBalance(-injected);
+      } else if (isEMoneyExpense(tx.type, tx.category)) {
+        await updateEMoneyBalance(tx.amount);
+      }
     }
 
     fetchTransactions();
@@ -114,18 +125,21 @@ export default function Home() {
       const isNowTransfer = isEMoneyTransfer(t.type, t.category);
       const isNowPakai = isEMoneyExpense(t.type, t.category);
 
+      const oldInjected = wasTransfer ? eMoneyInjected(oldTx) : 0;
+      const newInjected = isNowTransfer ? eMoneyInjected(t) : 0;
+
       if (wasTransfer && isNowTransfer) {
-        const delta = t.amount - oldTx.amount;
+        const delta = newInjected - oldInjected;
         if (delta !== 0) await updateEMoneyBalance(delta);
       } else if (wasPakai && isNowPakai) {
         const delta = oldTx.amount - t.amount;
         if (delta !== 0) await updateEMoneyBalance(delta);
       } else if (wasTransfer && !isNowTransfer) {
-        await updateEMoneyBalance(-oldTx.amount);
+        await updateEMoneyBalance(-oldInjected);
       } else if (wasPakai && !isNowPakai) {
         await updateEMoneyBalance(oldTx.amount);
       } else if (!wasTransfer && isNowTransfer) {
-        await updateEMoneyBalance(t.amount);
+        await updateEMoneyBalance(newInjected);
       } else if (!wasPakai && isNowPakai) {
         await updateEMoneyBalance(-t.amount);
       }

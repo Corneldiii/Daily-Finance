@@ -1,11 +1,13 @@
 "use client";
 import { useState, useEffect } from "react";
-import { Transaction, Balance } from "@/types";
+import { Transaction } from "@/types";
+import NetBalanceCalculator from "@/components/NetBalanceCalculator";
 
 interface Props { transactions: Transaction[]; carryOver?: number; currentMonth?: string }
 
 export default function Summary({ transactions, carryOver = 0, currentMonth }: Props) {
   const [eMoneyBalance, setEMoneyBalance] = useState(0);
+  const [showCalc, setShowCalc] = useState(false);
 
   const fetchBalance = () => {
     fetch("/api/balances/E-Money")
@@ -47,6 +49,7 @@ export default function Summary({ transactions, carryOver = 0, currentMonth }: P
   }).format(n);
 
   return (
+    <>
     <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))", gap: 10 }}>
         <div style={{
@@ -54,7 +57,18 @@ export default function Summary({ transactions, carryOver = 0, currentMonth }: P
           border: "1px solid rgba(124,107,255,0.3)",
           borderRadius: 12, padding: "14px 16px",
         }}>
-          <p style={{ fontSize: 10, color: "var(--muted)", letterSpacing: "0.08em", textTransform: "uppercase", marginBottom: 6 }}>Net Balance</p>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 6 }}>
+            <p style={{ fontSize: 10, color: "var(--muted)", letterSpacing: "0.08em", textTransform: "uppercase" }}>Net Balance</p>
+            <button onClick={() => setShowCalc(true)} title="Net Balance Calculator" style={{
+              background: "rgba(124,107,255,0.15)", border: "1px solid rgba(124,107,255,0.4)",
+              borderRadius: 8, width: 26, height: 26, cursor: "pointer",
+              display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13,
+              transition: "all 0.15s",
+            }}
+              onMouseEnter={e => { e.currentTarget.style.background = "rgba(124,107,255,0.3)"; }}
+              onMouseLeave={e => { e.currentTarget.style.background = "rgba(124,107,255,0.15)"; }}
+            >🧮</button>
+          </div>
           <p className="mono" style={{ fontSize: 20, fontWeight: 500, color: balance >= 0 ? "var(--green)" : "var(--red)" }}>
             {fmt(balance)}
           </p>
@@ -134,5 +148,8 @@ export default function Summary({ transactions, carryOver = 0, currentMonth }: P
         )}
       </div>
     </div>
+
+    {showCalc && <NetBalanceCalculator initialBalance={balance} onClose={() => setShowCalc(false)} />}
+    </>
   );
 }

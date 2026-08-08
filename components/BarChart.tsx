@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Transaction } from "@/types";
 import { localDateKey } from "@/utils/date";
 
@@ -9,8 +9,25 @@ interface Props {
   month: string;
 }
 
+const BUDGET_KEY = "food-daily-budget";
+const DEFAULT_FOOD_BUDGET = 50000;
+
 export default function BarChart({ transactions, month }: Props) {
-  const [dailyFoodBudget, setDailyFoodBudget] = useState(30000);
+  const [dailyFoodBudget, setDailyFoodBudget] = useState(DEFAULT_FOOD_BUDGET);
+
+  useEffect(() => {
+    const stored = localStorage.getItem(BUDGET_KEY);
+    if (stored) {
+      const v = Number(stored);
+      if (v > 0) setDailyFoodBudget(v);
+    }
+  }, []);
+
+  const handleBudgetChange = (val: number) => {
+    const v = isNaN(val) || val <= 0 ? DEFAULT_FOOD_BUDGET : val;
+    setDailyFoodBudget(v);
+    localStorage.setItem(BUDGET_KEY, String(v));
+  };
 
   const months = Array.from({ length: 6 }, (_, i) => {
     const d = new Date();
@@ -57,6 +74,7 @@ export default function BarChart({ transactions, month }: Props) {
   const monthTxs = transactions.filter(t => t.date.startsWith(currentMonth));
   const monthExpenses = monthTxs.filter(t => t.type === "expense").reduce((s, t) => s + t.amount, 0);
   const foodSpent = monthTxs.filter(t => t.type === "expense" && t.category === "Food").reduce((s, t) => s + t.amount, 0);
+  const foodAvgPerDay = dayOfMonth > 0 ? Math.round(foodSpent / dayOfMonth) : 0;
   const monthlyBudget = dailyFoodBudget * daysInMonth;
   const foodBudgetPct = monthlyBudget > 0 ? Math.min((foodSpent / monthlyBudget) * 100, 100) : 0;
 
@@ -237,7 +255,7 @@ export default function BarChart({ transactions, month }: Props) {
               <input
                 type="number"
                 value={dailyFoodBudget}
-                onChange={(e) => setDailyFoodBudget(Number(e.target.value))}
+                onChange={(e) => handleBudgetChange(Number(e.target.value))}
                 style={{
                   width: "100%", padding: "8px 10px 8px 30px", borderRadius: 8,
                   border: "1px solid var(--border)", background: "transparent",
@@ -248,7 +266,17 @@ export default function BarChart({ transactions, month }: Props) {
             </div>
           </div>
 
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(130px, 1fr))", gap: 8 }}>
+            <div style={{
+              background: "rgba(0,0,0,0.04)", borderRadius: 10, padding: "12px 14px",
+              display: "flex", flexDirection: "column", gap: 4,
+            }}>
+              <span style={{ fontSize: 10, color: "var(--muted)" }}>🍽️ Avg Makan/Hari</span>
+              <span style={{ fontSize: 20, fontWeight: 700, color: "var(--text)", letterSpacing: "-0.02em" }}>{fmtRp(foodAvgPerDay)}</span>
+              <span style={{ fontSize: 9, color: "var(--muted)" }}>
+                dari tgl 1 s/d {today.getDate()} ({fmtRp(foodSpent)} ÷ {dayOfMonth} hari)
+              </span>
+            </div>
             <div style={{
               background: "rgba(0,0,0,0.04)", borderRadius: 10, padding: "12px 14px",
               display: "flex", flexDirection: "column", gap: 4,

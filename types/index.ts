@@ -26,6 +26,7 @@ export interface Transaction {
   type: TransactionType;
   category: Category;
   date: string;
+  adminFee?: boolean;
 }
 
 export interface MonthlySummary {

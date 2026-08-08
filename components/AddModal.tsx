@@ -38,6 +38,7 @@ export default function AddModal({ onClose, onAdd, editData, onEdit }: Props) {
   const [amountDisplay, setAmountDisplay] = useState(editData ? formatRupiah(String(editData.amount)) : "");
   const [category, setCategory] = useState<Category>(editData?.category || "Food");
   const [date, setDate] = useState(editData?.date || localDateKey());
+  const [adminFee, setAdminFee] = useState(editData?.adminFee !== undefined ? editData.adminFee : true);
   const [loading, setLoading] = useState(false);
 
   const cats = type === "expense" ? EXPENSE_CATS : type === "saving" ? SAVING_CATS : type === "transfer" ? TRANSFER_CATS : type === "cash_withdrawal" ? CASH_WITHDRAWAL_CATS : INCOME_CATS;
@@ -63,10 +64,18 @@ export default function AddModal({ onClose, onAdd, editData, onEdit }: Props) {
   const handleSubmit = async () => {
     if (!title.trim() || !amount || isNaN(Number(amount))) return;
     setLoading(true);
+    const payload = {
+      title: title.trim(),
+      amount: Number(amount),
+      type,
+      category,
+      date,
+      adminFee: type === "transfer" ? adminFee : undefined,
+    };
     if (editData && onEdit) {
-      await onEdit(editData.id, { title: title.trim(), amount: Number(amount), type, category, date });
+      await onEdit(editData.id, payload);
     } else {
-      await onAdd({ title: title.trim(), amount: Number(amount), type, category, date });
+      await onAdd(payload);
     }
     setLoading(false);
     onClose();
@@ -131,6 +140,30 @@ export default function AddModal({ onClose, onAdd, editData, onEdit }: Props) {
           }}>
             Transfer ke E-Money: Net balance berkurang, saldo E-Money bertambah
           </div>
+        )}
+
+        {type === "transfer" && category === "E-Money" && (
+          <label style={{
+            display: "flex", alignItems: "center", gap: 10, marginBottom: 16,
+            background: "var(--surface2)", border: "1px solid var(--border)",
+            borderRadius: 10, padding: "10px 14px", cursor: "pointer",
+          }}>
+            <input
+              type="checkbox"
+              checked={adminFee}
+              onChange={e => setAdminFee(e.target.checked)}
+              style={{ width: 16, height: 16, accentColor: "#3b82f6", cursor: "pointer" }}
+            />
+            <span style={{ fontSize: 12, color: "var(--text)", flex: 1 }}>
+              By admin
+              <span style={{ display: "block", fontSize: 10, color: "var(--muted)", marginTop: 1 }}>
+                Potong Rp 1.500 dari saldo yang masuk E-Money
+              </span>
+            </span>
+            <span className="mono" style={{ fontSize: 11, color: "#60a5fa", flexShrink: 0 }}>
+              {amount ? `→ ${formatRupiah(String(Math.max(Number(amount) - 1500, 0)))}` : "→ -1.500"}
+            </span>
+          </label>
         )}
 
         {type === "expense" && category === "Pakai E-Money" && (

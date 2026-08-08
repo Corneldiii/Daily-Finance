@@ -13,6 +13,7 @@ model Transaction {
   type      String
   category  String
   date      String
+  adminFee  Boolean  @default(false)
   createdAt DateTime @default(now())
 }
 

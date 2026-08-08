@@ -34,6 +34,7 @@ export async function PUT(
       type: body.type,
       category: body.category,
       date: body.date,
+      ...(body.adminFee !== undefined ? { adminFee: body.adminFee } : {}),
     })
     .eq("id", id)
     .select()

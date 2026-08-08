@@ -32,6 +32,20 @@ async function performDeduction() {
 
   const dateStr = wibNow.toISOString().split("T")[0];
 
+  const { data: skipTx } = await supabase
+    .from("Transaction")
+    .select("id")
+    .eq("title", "Transport Skip Day")
+    .eq("date", dateStr);
+
+  if (skipTx && skipTx.length > 0) {
+    return { status: 200, body: {
+      success: false,
+      message: `Skipped, holiday set for ${dateStr}`,
+      date: dateStr,
+    } };
+  }
+
   const { data: existingTx } = await supabase
     .from("Transaction")
     .select("id")
