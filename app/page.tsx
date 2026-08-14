@@ -69,6 +69,9 @@ export default function Home() {
   const eMoneyInjected = (t: { type: string; category: string; amount: number; adminFee?: boolean }) =>
     isEMoneyTransfer(t.type, t.category) ? (t.adminFee ? t.amount - E_MONEY_ADMIN_FEE : t.amount) : 0;
 
+  const isRefundableExpense = (t: { type: string; category: string; title: string }) =>
+    isEMoneyExpense(t.type, t.category) || (t.type === "expense" && t.title === "Transport Auto-Deduction");
+
   const updateEMoneyBalance = async (delta: number) => {
     await fetch("/api/balances/E-Money", {
       method: "PUT",
@@ -106,6 +109,19 @@ export default function Home() {
       } else if (isEMoneyExpense(tx.type, tx.category)) {
         await updateEMoneyBalance(tx.amount);
       }
+    }
+
+    fetchTransactions();
+  };
+
+  const handleRevert = async (tx: Transaction) => {
+    const confirmMsg = `Revert pengeluaran "${tx.title}" (${tx.amount.toLocaleString("id-ID")}) dan kembalikan saldo?`;
+    if (!window.confirm(confirmMsg)) return;
+
+    await fetch(`/api/transactions/${tx.id}`, { method: "DELETE" });
+
+    if (isRefundableExpense(tx)) {
+      await updateEMoneyBalance(tx.amount);
     }
 
     fetchTransactions();
@@ -286,7 +302,7 @@ export default function Home() {
             <CalendarView transactions={transactions} month={month} selectedDate={selectedDate} onDayClick={setSelectedDate} />
             <MonthlyComparison transactions={transactions} month={month} />
             <div ref={txListRef}>
-              <TransactionList transactions={adjustedFiltered} onDelete={handleDelete} selectedDate={selectedDate} onClearDate={() => setSelectedDate(null)} onEdit={(tx) => { setEditingTx(tx); setShowModal(true); }} />
+              <TransactionList transactions={adjustedFiltered} onDelete={handleDelete} onRevert={handleRevert} selectedDate={selectedDate} onClearDate={() => setSelectedDate(null)} onEdit={(tx) => { setEditingTx(tx); setShowModal(true); }} />
             </div>
           </div>
         )}

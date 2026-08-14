@@ -2,7 +2,7 @@
 import { useState } from "react";
 import { Transaction } from "@/types";
 
-interface Props { transactions: Transaction[]; onDelete: (id: string) => void; selectedDate?: string | null; onClearDate?: () => void; onEdit?: (tx: Transaction) => void }
+interface Props { transactions: Transaction[]; onDelete: (id: string) => void; selectedDate?: string | null; onClearDate?: () => void; onEdit?: (tx: Transaction) => void; onRevert?: (tx: Transaction) => void }
 
 const ICONS: Record<string, string> = {
   Food: "🍜", Transport: "🚗", Shopping: "🛍️", Entertainment: "🎮",
@@ -12,7 +12,7 @@ const ICONS: Record<string, string> = {
 
 const EXPENSE_FILTERS = ["All", "Food", "Transport", "Shopping", "Entertainment", "Bills", "Health", "Kos", "Other"] as const;
 
-export default function TransactionList({ transactions, onDelete, selectedDate, onClearDate, onEdit }: Props) {
+export default function TransactionList({ transactions, onDelete, selectedDate, onClearDate, onEdit, onRevert }: Props) {
   const [filterCat, setFilterCat] = useState<string>("All");
   const [search, setSearch] = useState("");
   const [selected, setSelected] = useState<Set<string>>(new Set());
@@ -181,6 +181,16 @@ export default function TransactionList({ transactions, onDelete, selectedDate, 
                       onMouseEnter={e => { e.currentTarget.style.opacity = "1"; e.currentTarget.style.color = "var(--accent)"; }}
                       onMouseLeave={e => { e.currentTarget.style.opacity = "0"; e.currentTarget.style.color = "var(--muted)"; }}
                     >✎</button>
+                    {t.type === "expense" && onRevert && (
+                      <button onClick={e => { e.stopPropagation(); onRevert(t); }} title="Revert (hapus & kembalikan saldo)" style={{
+                        background: "none", border: "none", cursor: "pointer",
+                        color: "var(--muted)", fontSize: 12, padding: "4px",
+                        opacity: 0, transition: "opacity 0.15s",
+                      }}
+                        onMouseEnter={e => { e.currentTarget.style.opacity = "1"; e.currentTarget.style.color = "var(--green)"; }}
+                        onMouseLeave={e => { e.currentTarget.style.opacity = "0"; e.currentTarget.style.color = "var(--muted)"; }}
+                      >↩</button>
+                    )}
                     <button onClick={e => { e.stopPropagation(); onDelete(t.id); }} style={{
                       background: "none", border: "none", cursor: "pointer",
                       color: "var(--muted)", fontSize: 12, padding: "4px",

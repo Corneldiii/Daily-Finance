@@ -52,7 +52,7 @@ async function performDeduction() {
     .eq("title", "Transport Auto-Deduction")
     .eq("date", dateStr)
     .eq("category", "Transport")
-    .single();
+    .maybeSingle();
 
   if (existingTx) {
     return { status: 200, body: {
@@ -66,7 +66,7 @@ async function performDeduction() {
     .from("Balance")
     .select("id, amount")
     .eq("name", "E-Money")
-    .single();
+    .maybeSingle();
 
   if (!balance || balance.amount < TRANSPORT_AMOUNT) {
     return { status: 200, body: {
@@ -86,7 +86,16 @@ async function performDeduction() {
       date: dateStr,
     }]);
 
-  if (txError) return { status: 500, body: { error: txError.message } };
+  if (txError) {
+    if (txError.code === "23505") {
+      return { status: 200, body: {
+        success: false,
+        message: "Already deducted today",
+        date: dateStr,
+      } };
+    }
+    return { status: 500, body: { error: txError.message } };
+  }
 
   const { error: balError } = await supabase
     .from("Balance")
