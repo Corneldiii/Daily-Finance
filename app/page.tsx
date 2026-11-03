@@ -69,6 +69,14 @@ export default function Home() {
   const eMoneyInjected = (t: { type: string; category: string; amount: number; adminFee?: boolean }) =>
     isEMoneyTransfer(t.type, t.category) ? (t.adminFee ? t.amount - E_MONEY_ADMIN_FEE : t.amount) : 0;
 
+  const eMoneyDelta = (t: { type: string; category: string; amount: number; title: string; adminFee?: boolean }) => {
+    const injected = eMoneyInjected(t);
+    if (injected > 0) return injected;
+    if (isEMoneyExpense(t.type, t.category)) return -t.amount;
+    if (t.type === "expense" && t.title === "Transport Auto-Deduction") return -t.amount;
+    return 0;
+  };
+
   const isRefundableExpense = (t: { type: string; category: string; title: string }) =>
     isEMoneyExpense(t.type, t.category) || (t.type === "expense" && t.title === "Transport Auto-Deduction");
 
@@ -88,11 +96,9 @@ export default function Home() {
       body: JSON.stringify(t),
     });
 
-    const injected = eMoneyInjected(t);
-    if (injected > 0) {
-      await updateEMoneyBalance(injected);
-    } else if (isEMoneyExpense(t.type, t.category)) {
-      await updateEMoneyBalance(-t.amount);
+    const delta = eMoneyDelta(t);
+    if (delta !== 0) {
+      await updateEMoneyBalance(delta);
     }
 
     fetchTransactions();
@@ -103,11 +109,9 @@ export default function Home() {
     await fetch(`/api/transactions/${id}`, { method: "DELETE" });
 
     if (tx) {
-      const injected = eMoneyInjected(tx);
-      if (injected > 0) {
-        await updateEMoneyBalance(-injected);
-      } else if (isEMoneyExpense(tx.type, tx.category)) {
-        await updateEMoneyBalance(tx.amount);
+      const delta = eMoneyDelta(tx);
+      if (delta !== 0) {
+        await updateEMoneyBalance(-delta);
       }
     }
 
@@ -136,28 +140,10 @@ export default function Home() {
     });
 
     if (oldTx) {
-      const wasTransfer = isEMoneyTransfer(oldTx.type, oldTx.category);
-      const wasPakai = isEMoneyExpense(oldTx.type, oldTx.category);
-      const isNowTransfer = isEMoneyTransfer(t.type, t.category);
-      const isNowPakai = isEMoneyExpense(t.type, t.category);
-
-      const oldInjected = wasTransfer ? eMoneyInjected(oldTx) : 0;
-      const newInjected = isNowTransfer ? eMoneyInjected(t) : 0;
-
-      if (wasTransfer && isNowTransfer) {
-        const delta = newInjected - oldInjected;
-        if (delta !== 0) await updateEMoneyBalance(delta);
-      } else if (wasPakai && isNowPakai) {
-        const delta = oldTx.amount - t.amount;
-        if (delta !== 0) await updateEMoneyBalance(delta);
-      } else if (wasTransfer && !isNowTransfer) {
-        await updateEMoneyBalance(-oldInjected);
-      } else if (wasPakai && !isNowPakai) {
-        await updateEMoneyBalance(oldTx.amount);
-      } else if (!wasTransfer && isNowTransfer) {
-        await updateEMoneyBalance(newInjected);
-      } else if (!wasPakai && isNowPakai) {
-        await updateEMoneyBalance(-t.amount);
+      const oldDelta = eMoneyDelta(oldTx);
+      const newDelta = eMoneyDelta(t);
+      if (oldDelta !== newDelta) {
+        await updateEMoneyBalance(newDelta - oldDelta);
       }
     }
 
@@ -181,7 +167,7 @@ export default function Home() {
   const getNetBalance = (monthKey: string) => {
     const txs = transactions.filter(t => t.date.startsWith(monthKey));
     const income = txs.filter(t => t.type === "income").reduce((s, t) => s + t.amount, 0);
-    const expense = txs.filter(t => t.type === "expense" && t.category !== "Pakai E-Money").reduce((s, t) => s + t.amount, 0);
+    const expense = txs.filter(t => t.type === "expense" && t.title !== "Transport Auto-Deduction" && t.category !== "Pakai E-Money").reduce((s, t) => s + t.amount, 0);
     const saving = txs.filter(t => t.type === "saving").reduce((s, t) => s + t.amount, 0);
     const transfer = txs.filter(t => t.type === "transfer").reduce((s, t) => s + t.amount, 0);
     return income - expense - saving - transfer;
@@ -193,20 +179,32 @@ export default function Home() {
     const [selY, selM] = month.split("-").map(Number);
     const selKey = `${selY}-${String(selM).padStart(2, "0")}`;
     if (selKey <= currentKey) return 0;
+    const hasManualCarry = currentFiltered.some(t =>
+      t.type === "income" &&
+      (t.title === "Carry Over" || /sisa|net balance|carry/i.test(t.title))
+    );
+    if (hasManualCarry) return 0;
+    const isManualCarry = (t: Transaction) =>
+      t.type === "income" &&
+      (t.title === "Carry Over" || /sisa|net balance|carry/i.test(t.title));
+    const [curY, curM] = currentKey.split("-").map(Number);
     let carry = 0;
-    const d = new Date(selY, selM - 1, 1);
-    d.setMonth(d.getMonth() - 1);
-    for (let i = 0; i < 12; i++) {
+    const d = new Date(curY, curM - 1, 1);
+    for (let i = 0; i < 36; i++) {
       const mk = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
-      const nb = getNetBalance(mk);
-      if (nb > 0) carry += nb;
-      d.setMonth(d.getMonth() - 1);
+      if (mk >= selKey) break;
+      let monthNet = getNetBalance(mk);
+      if (mk !== currentKey) {
+        monthNet -= transactions.filter(t => t.date.startsWith(mk) && isManualCarry(t)).reduce((s, t) => s + t.amount, 0);
+      }
+      carry += monthNet;
+      d.setMonth(d.getMonth() + 1);
     }
-    return carry;
+    return carry > 0 ? carry : 0;
   })();
 
   const adjustedFiltered = [...currentFiltered];
-  if (carryOverBalances > 0 && currentFiltered.length > 0) {
+  if (carryOverBalances > 0) {
     const hasIncome = currentFiltered.some(t => t.type === "income" && t.title === "Carry Over");
     if (!hasIncome) {
       adjustedFiltered.unshift({
@@ -290,7 +288,7 @@ export default function Home() {
           </div>
         ) : (
           <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-            <Summary transactions={adjustedFiltered} carryOver={carryOverBalances} currentMonth={month} />
+            <Summary transactions={adjustedFiltered} allTransactions={transactions} carryOver={carryOverBalances} currentMonth={month} />
             <TransportScheduler />
             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))", gap: 16 }}>
               <BarChart transactions={transactions} month={month} />

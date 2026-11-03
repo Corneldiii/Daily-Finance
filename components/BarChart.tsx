@@ -48,10 +48,13 @@ export default function BarChart({ transactions, month }: Props) {
       expense: txs
         .filter((t) => t.type === "expense")
         .reduce((s, t) => s + t.amount, 0),
+      saving: txs
+        .filter((t) => t.type === "saving")
+        .reduce((s, t) => s + t.amount, 0),
     };
   });
 
-  const max = Math.max(...data.flatMap((d) => [d.income, d.expense]), 1);
+  const max = Math.max(...data.flatMap((d) => [d.income, d.expense, d.saving]), 1);
 
   const fmtRp = (n: number) => new Intl.NumberFormat("id-ID", {
     style: "currency", currency: "IDR", maximumFractionDigits: 0,
@@ -117,6 +120,7 @@ export default function BarChart({ transactions, month }: Props) {
           {[
             ["var(--green)", "Income"],
             ["var(--red)", "Expenses"],
+            ["var(--accent)", "Savings"],
           ].map(([c, l]) => (
             <span
               key={l}
@@ -196,6 +200,18 @@ export default function BarChart({ transactions, month }: Props) {
                   transition: "height 0.6s ease",
                 }}
                 title={fmtRp(d.expense)}
+              />
+              <div
+                style={{
+                  flex: 1,
+                  borderRadius: "3px 3px 0 0",
+                  background: "var(--accent)",
+                  opacity: 0.8,
+                  height: `${(d.saving / max) * 100}%`,
+                  minHeight: d.saving > 0 ? 3 : 0,
+                  transition: "height 0.6s ease",
+                }}
+                title={fmtRp(d.saving)}
               />
             </div>
             <span style={{ fontSize: 10, color: "var(--muted)" }}>

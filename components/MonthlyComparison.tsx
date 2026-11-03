@@ -23,12 +23,13 @@ export default function MonthlyComparison({ transactions, month }: Props) {
   const getMonthData = (mk: string) => {
     const txs = transactions.filter(t => t.date.startsWith(mk));
     const income = txs.filter(t => t.type === "income").reduce((s, t) => s + t.amount, 0);
-    const expense = txs.filter(t => t.type === "expense").reduce((s, t) => s + t.amount, 0);
+    const expense = txs.filter(t => t.type === "expense" && t.title !== "Transport Auto-Deduction" && t.category !== "Pakai E-Money").reduce((s, t) => s + t.amount, 0);
+    const saving = txs.filter(t => t.type === "saving").reduce((s, t) => s + t.amount, 0);
     const byCategory = txs.filter(t => t.type === "expense").reduce<Record<string, number>>((acc, t) => {
       acc[t.category] = (acc[t.category] || 0) + t.amount;
       return acc;
     }, {});
-    return { income, expense, net: income - expense, byCategory, days: new Date(parseInt(mk.split("-")[0]), parseInt(mk.split("-")[1]), 0).getDate() };
+    return { income, expense, saving, net: income - expense - saving, byCategory, days: new Date(parseInt(mk.split("-")[0]), parseInt(mk.split("-")[1]), 0).getDate() };
   };
 
   const current = getMonthData(month);
@@ -71,10 +72,11 @@ export default function MonthlyComparison({ transactions, month }: Props) {
       </div>
 
       {/* Summary cards */}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 8, marginBottom: 16 }}>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(85px, 1fr))", gap: 8, marginBottom: 16 }}>
         {[
           { label: "Income", curr: current.income, prev: previous.income, higherIsBad: false },
           { label: "Expenses", curr: current.expense, prev: previous.expense, higherIsBad: true },
+          { label: "Savings", curr: current.saving, prev: previous.saving, higherIsBad: false },
           { label: "Net", curr: current.net, prev: previous.net, higherIsBad: false },
         ].map(({ label, curr, prev, higherIsBad }) => (
           <div key={label} style={{ background: "var(--surface2)", borderRadius: 8, padding: "10px 12px" }}>

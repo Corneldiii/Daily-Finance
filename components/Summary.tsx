@@ -3,9 +3,9 @@ import { useState, useEffect } from "react";
 import { Transaction } from "@/types";
 import NetBalanceCalculator from "@/components/NetBalanceCalculator";
 
-interface Props { transactions: Transaction[]; carryOver?: number; currentMonth?: string }
+interface Props { transactions: Transaction[]; allTransactions?: Transaction[]; carryOver?: number; currentMonth?: string }
 
-export default function Summary({ transactions, carryOver = 0, currentMonth }: Props) {
+export default function Summary({ transactions, allTransactions, carryOver = 0, currentMonth }: Props) {
   const [eMoneyBalance, setEMoneyBalance] = useState(0);
   const [showCalc, setShowCalc] = useState(false);
 
@@ -27,6 +27,8 @@ export default function Summary({ transactions, carryOver = 0, currentMonth }: P
   const expense = transactions.filter(t => t.type === "expense" && t.title !== "Transport Auto-Deduction" && t.category !== "Pakai E-Money").reduce((s, t) => s + t.amount, 0);
   const expenseExKos = transactions.filter(t => t.type === "expense" && t.category !== "Kos" && t.title !== "Transport Auto-Deduction" && t.category !== "Pakai E-Money").reduce((s, t) => s + t.amount, 0);
   const saving = transactions.filter(t => t.type === "saving").reduce((s, t) => s + t.amount, 0);
+  const savingPool = (allTransactions ?? transactions).filter(t => t.type === "saving");
+  const savingTotal = savingPool.reduce((s, t) => s + t.amount, 0);
   const transfer = transactions.filter(t => t.type === "transfer").reduce((s, t) => s + t.amount, 0);
   const balance = income - expense - saving - transfer;
   const savingsRate = income > 0 ? Math.round(((income - expense) / income) * 100) : 0;
@@ -124,8 +126,8 @@ export default function Summary({ transactions, carryOver = 0, currentMonth }: P
             <p style={{ fontSize: 10, color: "var(--muted)", letterSpacing: "0.08em", textTransform: "uppercase" }}>Savings</p>
             <span style={{ fontSize: 9, background: "var(--accent-dim)", color: "var(--accent)", padding: "2px 6px", borderRadius: 12 }}>SAV</span>
           </div>
-          <p className="mono" style={{ fontSize: 18, fontWeight: 500, color: "var(--accent)" }}>{fmt(saving)}</p>
-          <p style={{ fontSize: 11, color: "var(--muted)", marginTop: 4 }}>{transactions.filter(t => t.type === "saving").length} transactions</p>
+          <p className="mono" style={{ fontSize: 18, fontWeight: 500, color: "var(--accent)" }}>{fmt(savingTotal)}</p>
+          <p style={{ fontSize: 11, color: "var(--muted)", marginTop: 4 }}>{savingPool.length} entries · all time</p>
         </div>
       </div>
 

@@ -173,32 +173,23 @@ export default function TransactionList({ transactions, onDelete, selectedDate, 
                     <span className="mono" style={{ fontSize: 13, fontWeight: 500, color: t.type === "income" ? "var(--green)" : t.type === "saving" ? "var(--accent)" : t.type === "transfer" ? "#60a5fa" : t.type === "cash_withdrawal" ? "#fbbf24" : "var(--red)", flexShrink: 0 }}>
                       {t.type === "income" ? "+" : t.type === "cash_withdrawal" ? "~" : "-"}{fmt(t.amount)}
                     </span>
-                    <button onClick={e => { e.stopPropagation(); onEdit?.(t); }} style={{
+                    <button onClick={e => { e.stopPropagation(); onEdit?.(t); }} title="Edit" style={{
                       background: "none", border: "none", cursor: "pointer",
-                      color: "var(--muted)", fontSize: 12, padding: "4px",
-                      opacity: 0, transition: "opacity 0.15s",
-                    }}
-                      onMouseEnter={e => { e.currentTarget.style.opacity = "1"; e.currentTarget.style.color = "var(--accent)"; }}
-                      onMouseLeave={e => { e.currentTarget.style.opacity = "0"; e.currentTarget.style.color = "var(--muted)"; }}
-                    >✎</button>
+                      color: "var(--accent)", fontSize: 12, padding: "4px",
+                      opacity: 1, transition: "opacity 0.15s",
+                    }}>✎</button>
                     {t.type === "expense" && onRevert && (
                       <button onClick={e => { e.stopPropagation(); onRevert(t); }} title="Revert (hapus & kembalikan saldo)" style={{
                         background: "none", border: "none", cursor: "pointer",
-                        color: "var(--muted)", fontSize: 12, padding: "4px",
-                        opacity: 0, transition: "opacity 0.15s",
-                      }}
-                        onMouseEnter={e => { e.currentTarget.style.opacity = "1"; e.currentTarget.style.color = "var(--green)"; }}
-                        onMouseLeave={e => { e.currentTarget.style.opacity = "0"; e.currentTarget.style.color = "var(--muted)"; }}
-                      >↩</button>
+                        color: "var(--green)", fontSize: 12, padding: "4px",
+                        opacity: 1, transition: "opacity 0.15s",
+                      }}>↩</button>
                     )}
-                    <button onClick={e => { e.stopPropagation(); onDelete(t.id); }} style={{
+                    <button onClick={e => { e.stopPropagation(); onDelete(t.id); }} title="Delete" style={{
                       background: "none", border: "none", cursor: "pointer",
-                      color: "var(--muted)", fontSize: 12, padding: "4px",
-                      opacity: 0, transition: "opacity 0.15s",
-                    }}
-                      onMouseEnter={e => { e.currentTarget.style.opacity = "1"; e.currentTarget.style.color = "var(--red)"; }}
-                      onMouseLeave={e => { e.currentTarget.style.opacity = "0"; e.currentTarget.style.color = "var(--muted)"; }}
-                    >✕</button>
+                      color: "var(--red)", fontSize: 12, padding: "4px",
+                      opacity: 1, transition: "opacity 0.15s",
+                    }}>✕</button>
                   </div>
                   );
                 })}
