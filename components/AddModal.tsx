@@ -183,7 +183,7 @@ export default function AddModal({ onClose, onAdd, editData, onEdit }: Props) {
             background: "rgba(124,107,255,0.1)", border: "1px solid rgba(124,107,255,0.3)",
             borderRadius: 10, padding: "10px 14px", marginBottom: 16, fontSize: 12, color: "var(--accent)",
           }}>
-            Bayar dari Tabungan: Saldo Tabungan berkurang, net balance tetap
+            Bayar dari Tabungan: Angka Savings berkurang, net balance tetap
           </div>
         )}
 

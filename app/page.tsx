@@ -72,17 +72,10 @@ export default function Home() {
     return 0;
   };
 
-  const tabunganDelta = (t: { type: string; category: string; amount: number; source?: string }) => {
-    if (t.type === "saving" && t.category === "Tabungan") return t.amount;
-    if (t.type === "expense" && getExpenseSource(t) === "Tabungan") return -t.amount;
-    return 0;
-  };
-
   const refundTarget = (t: { type: string; category: string; title: string; source?: string }) => {
     if (t.type !== "expense") return null;
     if (t.title === "Transport Auto-Deduction") return "E-Money";
-    const src = getExpenseSource(t);
-    return src !== "Balance" ? src : null;
+    return getExpenseSource(t) === "E-Money" ? "E-Money" : null;
   };
 
   const updateBalance = async (name: string, delta: number) => {
@@ -103,7 +96,6 @@ export default function Home() {
     });
 
     await updateBalance("E-Money", eMoneyDelta(t));
-    await updateBalance("Tabungan", tabunganDelta(t));
 
     fetchTransactions();
   };
@@ -114,7 +106,6 @@ export default function Home() {
 
     if (tx) {
       await updateBalance("E-Money", -eMoneyDelta(tx));
-      await updateBalance("Tabungan", -tabunganDelta(tx));
     }
 
     fetchTransactions();
@@ -144,7 +135,6 @@ export default function Home() {
 
     if (oldTx) {
       await updateBalance("E-Money", eMoneyDelta(t) - eMoneyDelta(oldTx));
-      await updateBalance("Tabungan", tabunganDelta(t) - tabunganDelta(oldTx));
     }
 
     fetchTransactions();

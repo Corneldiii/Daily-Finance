@@ -1,24 +1,19 @@
 "use client";
 import { useState, useEffect } from "react";
 import { Transaction } from "@/types";
-import { isOffNetExpense } from "@/utils/transactions";
+import { getExpenseSource, isOffNetExpense } from "@/utils/transactions";
 import NetBalanceCalculator from "@/components/NetBalanceCalculator";
 
 interface Props { transactions: Transaction[]; allTransactions?: Transaction[]; carryOver?: number; currentMonth?: string }
 
 export default function Summary({ transactions, allTransactions, carryOver = 0, currentMonth }: Props) {
   const [eMoneyBalance, setEMoneyBalance] = useState(0);
-  const [tabunganBalance, setTabunganBalance] = useState(0);
   const [showCalc, setShowCalc] = useState(false);
 
   const fetchBalance = () => {
     fetch("/api/balances/E-Money")
       .then(r => r.json())
       .then(d => setEMoneyBalance(d.balance?.amount || 0))
-      .catch(() => {});
-    fetch("/api/balances/Tabungan")
-      .then(r => r.json())
-      .then(d => setTabunganBalance(d.balance?.amount || 0))
       .catch(() => {});
   };
 
@@ -34,7 +29,10 @@ export default function Summary({ transactions, allTransactions, carryOver = 0, 
   const expenseExKos = transactions.filter(t => t.type === "expense" && t.category !== "Kos" && t.title !== "Transport Auto-Deduction" && !isOffNetExpense(t)).reduce((s, t) => s + t.amount, 0);
   const saving = transactions.filter(t => t.type === "saving").reduce((s, t) => s + t.amount, 0);
   const savingPool = (allTransactions ?? transactions).filter(t => t.type === "saving");
-  const savingTotal = savingPool.reduce((s, t) => s + t.amount, 0);
+  const tabunganWithdrawals = (allTransactions ?? transactions)
+    .filter(t => t.type === "expense" && getExpenseSource(t) === "Tabungan")
+    .reduce((s, t) => s + t.amount, 0);
+  const savingTotal = savingPool.reduce((s, t) => s + t.amount, 0) - tabunganWithdrawals;
   const transfer = transactions.filter(t => t.type === "transfer").reduce((s, t) => s + t.amount, 0);
   const balance = income - expense - saving - transfer;
   const savingsRate = income > 0 ? Math.round(((income - expense) / income) * 100) : 0;
@@ -133,7 +131,12 @@ export default function Summary({ transactions, allTransactions, carryOver = 0, 
             <span style={{ fontSize: 9, background: "var(--accent-dim)", color: "var(--accent)", padding: "2px 6px", borderRadius: 12 }}>SAV</span>
           </div>
           <p className="mono" style={{ fontSize: 18, fontWeight: 500, color: "var(--accent)" }}>{fmt(savingTotal)}</p>
-          <p style={{ fontSize: 11, color: "var(--muted)", marginTop: 4 }}>{savingPool.length} entries · all time</p>
+          <p style={{ fontSize: 11, color: "var(--muted)", marginTop: 4 }}>
+            {savingPool.length} entries · all time
+            {tabunganWithdrawals > 0 && (
+              <span style={{ color: "var(--red)" }}> · -{fmt(tabunganWithdrawals)} ditarik</span>
+            )}
+          </p>
         </div>
       </div>
 
@@ -155,23 +158,6 @@ export default function Summary({ transactions, allTransactions, carryOver = 0, 
               ~{transportDaysRemaining} transport days left (Rp 3,500/weekday)
             </p>
           )}
-        </div>
-
-        <div style={{
-          background: "linear-gradient(135deg, rgba(124,107,255,0.1) 0%, rgba(124,107,255,0.05) 100%)",
-          border: "1px solid rgba(124,107,255,0.3)",
-          borderRadius: 12, padding: "14px 16px",
-        }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
-            <span style={{ fontSize: 16 }}>🏦</span>
-            <p style={{ fontSize: 10, color: "var(--accent)", letterSpacing: "0.08em", textTransform: "uppercase" }}>Saldo Tabungan</p>
-          </div>
-          <p className="mono" style={{ fontSize: 18, fontWeight: 500, color: "var(--accent)" }}>
-            {fmt(tabunganBalance)}
-          </p>
-          <p style={{ fontSize: 9, color: "var(--muted)", marginTop: 3 }}>
-            Top-up dari saving &quot;Tabungan&quot;
-          </p>
         </div>
       </div>
     </div>
