@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useRef } from "react";
 import { Transaction, Installment, InstallmentPayment } from "@/types";
+import { getExpenseSource, isOffNetExpense } from "@/utils/transactions";
 import { exportToExcel } from "@/utils/excelExport";
 import Summary from "@/components/Summary";
 import BarChart from "@/components/BarChart";
@@ -61,27 +62,32 @@ export default function Home() {
   const isEMoneyTransfer = (type: string, category: string) =>
     type === "transfer" && category === "E-Money";
 
-  const isEMoneyExpense = (type: string, category: string) =>
-    type === "expense" && category === "Pakai E-Money";
-
   const E_MONEY_ADMIN_FEE = 1500;
 
-  const eMoneyInjected = (t: { type: string; category: string; amount: number; adminFee?: boolean }) =>
-    isEMoneyTransfer(t.type, t.category) ? (t.adminFee ? t.amount - E_MONEY_ADMIN_FEE : t.amount) : 0;
-
-  const eMoneyDelta = (t: { type: string; category: string; amount: number; title: string; adminFee?: boolean }) => {
-    const injected = eMoneyInjected(t);
+  const eMoneyDelta = (t: { type: string; category: string; amount: number; title: string; adminFee?: boolean; source?: string }) => {
+    const injected = isEMoneyTransfer(t.type, t.category) ? (t.adminFee ? t.amount - E_MONEY_ADMIN_FEE : t.amount) : 0;
     if (injected > 0) return injected;
-    if (isEMoneyExpense(t.type, t.category)) return -t.amount;
+    if (t.type === "expense" && getExpenseSource(t) === "E-Money") return -t.amount;
     if (t.type === "expense" && t.title === "Transport Auto-Deduction") return -t.amount;
     return 0;
   };
 
-  const isRefundableExpense = (t: { type: string; category: string; title: string }) =>
-    isEMoneyExpense(t.type, t.category) || (t.type === "expense" && t.title === "Transport Auto-Deduction");
+  const tabunganDelta = (t: { type: string; category: string; amount: number; source?: string }) => {
+    if (t.type === "saving" && t.category === "Tabungan") return t.amount;
+    if (t.type === "expense" && getExpenseSource(t) === "Tabungan") return -t.amount;
+    return 0;
+  };
 
-  const updateEMoneyBalance = async (delta: number) => {
-    await fetch("/api/balances/E-Money", {
+  const refundTarget = (t: { type: string; category: string; title: string; source?: string }) => {
+    if (t.type !== "expense") return null;
+    if (t.title === "Transport Auto-Deduction") return "E-Money";
+    const src = getExpenseSource(t);
+    return src !== "Balance" ? src : null;
+  };
+
+  const updateBalance = async (name: string, delta: number) => {
+    if (delta === 0) return;
+    await fetch(`/api/balances/${encodeURIComponent(name)}`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ delta }),
@@ -96,10 +102,8 @@ export default function Home() {
       body: JSON.stringify(t),
     });
 
-    const delta = eMoneyDelta(t);
-    if (delta !== 0) {
-      await updateEMoneyBalance(delta);
-    }
+    await updateBalance("E-Money", eMoneyDelta(t));
+    await updateBalance("Tabungan", tabunganDelta(t));
 
     fetchTransactions();
   };
@@ -109,10 +113,8 @@ export default function Home() {
     await fetch(`/api/transactions/${id}`, { method: "DELETE" });
 
     if (tx) {
-      const delta = eMoneyDelta(tx);
-      if (delta !== 0) {
-        await updateEMoneyBalance(-delta);
-      }
+      await updateBalance("E-Money", -eMoneyDelta(tx));
+      await updateBalance("Tabungan", -tabunganDelta(tx));
     }
 
     fetchTransactions();
@@ -124,8 +126,9 @@ export default function Home() {
 
     await fetch(`/api/transactions/${tx.id}`, { method: "DELETE" });
 
-    if (isRefundableExpense(tx)) {
-      await updateEMoneyBalance(tx.amount);
+    const target = refundTarget(tx);
+    if (target) {
+      await updateBalance(target, tx.amount);
     }
 
     fetchTransactions();
@@ -140,11 +143,8 @@ export default function Home() {
     });
 
     if (oldTx) {
-      const oldDelta = eMoneyDelta(oldTx);
-      const newDelta = eMoneyDelta(t);
-      if (oldDelta !== newDelta) {
-        await updateEMoneyBalance(newDelta - oldDelta);
-      }
+      await updateBalance("E-Money", eMoneyDelta(t) - eMoneyDelta(oldTx));
+      await updateBalance("Tabungan", tabunganDelta(t) - tabunganDelta(oldTx));
     }
 
     fetchTransactions();
@@ -167,7 +167,7 @@ export default function Home() {
   const getNetBalance = (monthKey: string) => {
     const txs = transactions.filter(t => t.date.startsWith(monthKey));
     const income = txs.filter(t => t.type === "income").reduce((s, t) => s + t.amount, 0);
-    const expense = txs.filter(t => t.type === "expense" && t.title !== "Transport Auto-Deduction" && t.category !== "Pakai E-Money").reduce((s, t) => s + t.amount, 0);
+    const expense = txs.filter(t => t.type === "expense" && t.title !== "Transport Auto-Deduction" && !isOffNetExpense(t)).reduce((s, t) => s + t.amount, 0);
     const saving = txs.filter(t => t.type === "saving").reduce((s, t) => s + t.amount, 0);
     const transfer = txs.filter(t => t.type === "transfer").reduce((s, t) => s + t.amount, 0);
     return income - expense - saving - transfer;

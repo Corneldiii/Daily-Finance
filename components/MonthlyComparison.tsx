@@ -1,5 +1,6 @@
 "use client";
 import { Transaction } from "@/types";
+import { isOffNetExpense } from "@/utils/transactions";
 
 interface Props { transactions: Transaction[]; month: string }
 
@@ -23,7 +24,7 @@ export default function MonthlyComparison({ transactions, month }: Props) {
   const getMonthData = (mk: string) => {
     const txs = transactions.filter(t => t.date.startsWith(mk));
     const income = txs.filter(t => t.type === "income").reduce((s, t) => s + t.amount, 0);
-    const expense = txs.filter(t => t.type === "expense" && t.title !== "Transport Auto-Deduction" && t.category !== "Pakai E-Money").reduce((s, t) => s + t.amount, 0);
+    const expense = txs.filter(t => t.type === "expense" && t.title !== "Transport Auto-Deduction" && !isOffNetExpense(t)).reduce((s, t) => s + t.amount, 0);
     const saving = txs.filter(t => t.type === "saving").reduce((s, t) => s + t.amount, 0);
     const byCategory = txs.filter(t => t.type === "expense").reduce<Record<string, number>>((acc, t) => {
       acc[t.category] = (acc[t.category] || 0) + t.amount;

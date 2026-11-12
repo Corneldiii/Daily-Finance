@@ -1,18 +1,24 @@
 "use client";
 import { useState, useEffect } from "react";
 import { Transaction } from "@/types";
+import { isOffNetExpense } from "@/utils/transactions";
 import NetBalanceCalculator from "@/components/NetBalanceCalculator";
 
 interface Props { transactions: Transaction[]; allTransactions?: Transaction[]; carryOver?: number; currentMonth?: string }
 
 export default function Summary({ transactions, allTransactions, carryOver = 0, currentMonth }: Props) {
   const [eMoneyBalance, setEMoneyBalance] = useState(0);
+  const [tabunganBalance, setTabunganBalance] = useState(0);
   const [showCalc, setShowCalc] = useState(false);
 
   const fetchBalance = () => {
     fetch("/api/balances/E-Money")
       .then(r => r.json())
       .then(d => setEMoneyBalance(d.balance?.amount || 0))
+      .catch(() => {});
+    fetch("/api/balances/Tabungan")
+      .then(r => r.json())
+      .then(d => setTabunganBalance(d.balance?.amount || 0))
       .catch(() => {});
   };
 
@@ -24,8 +30,8 @@ export default function Summary({ transactions, allTransactions, carryOver = 0, 
   }, []);
 
   const income = transactions.filter(t => t.type === "income").reduce((s, t) => s + t.amount, 0);
-  const expense = transactions.filter(t => t.type === "expense" && t.title !== "Transport Auto-Deduction" && t.category !== "Pakai E-Money").reduce((s, t) => s + t.amount, 0);
-  const expenseExKos = transactions.filter(t => t.type === "expense" && t.category !== "Kos" && t.title !== "Transport Auto-Deduction" && t.category !== "Pakai E-Money").reduce((s, t) => s + t.amount, 0);
+  const expense = transactions.filter(t => t.type === "expense" && t.title !== "Transport Auto-Deduction" && !isOffNetExpense(t)).reduce((s, t) => s + t.amount, 0);
+  const expenseExKos = transactions.filter(t => t.type === "expense" && t.category !== "Kos" && t.title !== "Transport Auto-Deduction" && !isOffNetExpense(t)).reduce((s, t) => s + t.amount, 0);
   const saving = transactions.filter(t => t.type === "saving").reduce((s, t) => s + t.amount, 0);
   const savingPool = (allTransactions ?? transactions).filter(t => t.type === "saving");
   const savingTotal = savingPool.reduce((s, t) => s + t.amount, 0);
@@ -38,7 +44,7 @@ export default function Summary({ transactions, allTransactions, carryOver = 0, 
   const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
   const isCurrentMonth = currentMonth === `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
 
-  const expenseDays = transactions.filter(t => t.type === "expense" && t.category !== "Kos" && t.category !== "Pakai E-Money" && t.date.startsWith(currentMonth || `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`)).reduce<Set<string>>((acc, t) => { acc.add(t.date); return acc; }, new Set());
+  const expenseDays = transactions.filter(t => t.type === "expense" && t.category !== "Kos" && !isOffNetExpense(t) && t.date.startsWith(currentMonth || `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`)).reduce<Set<string>>((acc, t) => { acc.add(t.date); return acc; }, new Set());
   const activeDays = expenseDays.size;
   const avgPerDay = activeDays > 0 ? Math.round(expenseExKos / activeDays) : 0;
   const daysLeft = isCurrentMonth ? daysInMonth - today : daysInMonth;
@@ -118,7 +124,7 @@ export default function Summary({ transactions, allTransactions, carryOver = 0, 
             <span style={{ fontSize: 9, background: "var(--red-dim)", color: "var(--red)", padding: "2px 6px", borderRadius: 12 }}>OUT</span>
           </div>
           <p className="mono" style={{ fontSize: 18, fontWeight: 500, color: "var(--red)" }}>{fmt(expense)}</p>
-          <p style={{ fontSize: 11, color: "var(--muted)", marginTop: 4 }}>{transactions.filter(t => t.type === "expense" && t.category !== "Pakai E-Money").length} transactions</p>
+          <p style={{ fontSize: 11, color: "var(--muted)", marginTop: 4 }}>{transactions.filter(t => t.type === "expense" && !isOffNetExpense(t)).length} transactions</p>
         </div>
 
         <div style={{ background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 12, padding: "14px 16px" }}>
@@ -131,23 +137,42 @@ export default function Summary({ transactions, allTransactions, carryOver = 0, 
         </div>
       </div>
 
-      <div style={{
-        background: "linear-gradient(135deg, rgba(59,130,246,0.1) 0%, rgba(59,130,246,0.05) 100%)",
-        border: "1px solid rgba(59,130,246,0.3)",
-        borderRadius: 12, padding: "14px 16px",
-      }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
-          <span style={{ fontSize: 16 }}>💳</span>
-          <p style={{ fontSize: 10, color: "#93c5fd", letterSpacing: "0.08em", textTransform: "uppercase" }}>E-Money Balance</p>
-        </div>
-        <p className="mono" style={{ fontSize: 18, fontWeight: 500, color: "#60a5fa" }}>
-          {fmt(eMoneyBalance)}
-        </p>
-        {eMoneyBalance > 0 && (
-          <p style={{ fontSize: 9, color: "#93c5fd", marginTop: 3 }}>
-            ~{transportDaysRemaining} transport days left (Rp 3,500/weekday)
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 10 }}>
+        <div style={{
+          background: "linear-gradient(135deg, rgba(59,130,246,0.1) 0%, rgba(59,130,246,0.05) 100%)",
+          border: "1px solid rgba(59,130,246,0.3)",
+          borderRadius: 12, padding: "14px 16px",
+        }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
+            <span style={{ fontSize: 16 }}>💳</span>
+            <p style={{ fontSize: 10, color: "#93c5fd", letterSpacing: "0.08em", textTransform: "uppercase" }}>E-Money Balance</p>
+          </div>
+          <p className="mono" style={{ fontSize: 18, fontWeight: 500, color: "#60a5fa" }}>
+            {fmt(eMoneyBalance)}
           </p>
-        )}
+          {eMoneyBalance > 0 && (
+            <p style={{ fontSize: 9, color: "#93c5fd", marginTop: 3 }}>
+              ~{transportDaysRemaining} transport days left (Rp 3,500/weekday)
+            </p>
+          )}
+        </div>
+
+        <div style={{
+          background: "linear-gradient(135deg, rgba(124,107,255,0.1) 0%, rgba(124,107,255,0.05) 100%)",
+          border: "1px solid rgba(124,107,255,0.3)",
+          borderRadius: 12, padding: "14px 16px",
+        }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
+            <span style={{ fontSize: 16 }}>🏦</span>
+            <p style={{ fontSize: 10, color: "var(--accent)", letterSpacing: "0.08em", textTransform: "uppercase" }}>Saldo Tabungan</p>
+          </div>
+          <p className="mono" style={{ fontSize: 18, fontWeight: 500, color: "var(--accent)" }}>
+            {fmt(tabunganBalance)}
+          </p>
+          <p style={{ fontSize: 9, color: "var(--muted)", marginTop: 3 }}>
+            Top-up dari saving &quot;Tabungan&quot;
+          </p>
+        </div>
       </div>
     </div>
 

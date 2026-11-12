@@ -14,6 +14,7 @@ model Transaction {
   category  String
   date      String
   adminFee  Boolean  @default(false)
+  source    String   @default("Balance")
   createdAt DateTime @default(now())
 }
 

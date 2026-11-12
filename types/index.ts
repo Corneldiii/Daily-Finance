@@ -1,5 +1,7 @@
 export type TransactionType = "income" | "expense" | "saving" | "transfer" | "cash_withdrawal";
 
+export type FundingSource = "Balance" | "Tabungan" | "E-Money";
+
 export type Category =
   | "Food"
   | "Transport"
@@ -27,6 +29,7 @@ export interface Transaction {
   category: Category;
   date: string;
   adminFee?: boolean;
+  source?: FundingSource;
 }
 
 export interface MonthlySummary {

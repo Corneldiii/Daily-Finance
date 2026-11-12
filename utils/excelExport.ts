@@ -53,6 +53,7 @@ export function exportToExcel(
     Title: t.title,
     Category: t.category,
     Type: t.type,
+    Source: t.source || "Balance",
     Amount: t.amount,
     "Amount (Formatted)": fmt(t.amount),
   }));

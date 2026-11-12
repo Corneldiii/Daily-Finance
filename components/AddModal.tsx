@@ -1,11 +1,12 @@
 "use client";
 import { useState } from "react";
 import { Category, Transaction, TransactionType } from "@/types";
+import { FUNDING_SOURCES, getExpenseSource, SOURCE_META } from "@/utils/transactions";
 import { localDateKey } from "@/utils/date";
 
 interface Props { onClose: () => void; onAdd: (t: Omit<Transaction, "id">) => Promise<void>; editData?: Transaction | null; onEdit?: (id: string, t: Omit<Transaction, "id">) => Promise<void> }
 
-const EXPENSE_CATS: Category[] = ["Food", "Transport", "Shopping", "Entertainment", "Bills", "Health", "Kos", "Pakai E-Money", "Other"];
+const EXPENSE_CATS: Category[] = ["Food", "Transport", "Shopping", "Entertainment", "Bills", "Health", "Kos", "Other"];
 const INCOME_CATS: Category[] = ["Salary", "Freelance", "Investment", "Other"];
 const SAVING_CATS: Category[] = ["Tabungan", "Investasi", "Dana Darurat", "Other"];
 const TRANSFER_CATS: Category[] = ["E-Money", "Other"];
@@ -36,7 +37,8 @@ export default function AddModal({ onClose, onAdd, editData, onEdit }: Props) {
   const [title, setTitle] = useState(editData?.title || "");
   const [amount, setAmount] = useState(editData ? String(editData.amount) : "");
   const [amountDisplay, setAmountDisplay] = useState(editData ? formatRupiah(String(editData.amount)) : "");
-  const [category, setCategory] = useState<Category>(editData?.category || "Food");
+  const [category, setCategory] = useState<Category>(editData?.category === "Pakai E-Money" ? "Other" : editData?.category || "Food");
+  const [source, setSource] = useState(editData && editData.type === "expense" ? getExpenseSource(editData) : "Balance");
   const [date, setDate] = useState(editData?.date || localDateKey());
   const [adminFee, setAdminFee] = useState(editData?.adminFee !== undefined ? editData.adminFee : true);
   const [loading, setLoading] = useState(false);
@@ -71,6 +73,7 @@ export default function AddModal({ onClose, onAdd, editData, onEdit }: Props) {
       category,
       date,
       adminFee: type === "transfer" ? adminFee : undefined,
+      source: type === "expense" ? source : undefined,
     };
     if (editData && onEdit) {
       await onEdit(editData.id, payload);
@@ -166,12 +169,21 @@ export default function AddModal({ onClose, onAdd, editData, onEdit }: Props) {
           </label>
         )}
 
-        {type === "expense" && category === "Pakai E-Money" && (
+        {type === "expense" && source === "E-Money" && (
           <div style={{
             background: "rgba(245,158,11,0.1)", border: "1px solid rgba(245,158,11,0.3)",
             borderRadius: 10, padding: "10px 14px", marginBottom: 16, fontSize: 12, color: "#fbbf24",
           }}>
-            Pakai E-Money: Saldo E-Money berkurang, net balance tetap
+            Bayar dari E-Money: Saldo E-Money berkurang, net balance tetap
+          </div>
+        )}
+
+        {type === "expense" && source === "Tabungan" && (
+          <div style={{
+            background: "rgba(124,107,255,0.1)", border: "1px solid rgba(124,107,255,0.3)",
+            borderRadius: 10, padding: "10px 14px", marginBottom: 16, fontSize: 12, color: "var(--accent)",
+          }}>
+            Bayar dari Tabungan: Saldo Tabungan berkurang, net balance tetap
           </div>
         )}
 
@@ -222,7 +234,7 @@ export default function AddModal({ onClose, onAdd, editData, onEdit }: Props) {
                 ))}
               </div>
             )}
-            {type === "expense" && category === "Pakai E-Money" && (
+            {type === "expense" && source === "E-Money" && (
               <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginTop: 8 }}>
                 {["Bayar Transport", "Bayar Tol", "Beli Makan", "Belanja Mini Market", "Lainnya"].map(t => (
                   <button key={t} onClick={() => setTitle(t)} style={{
@@ -320,6 +332,26 @@ export default function AddModal({ onClose, onAdd, editData, onEdit }: Props) {
             <label style={{ fontSize: 11, color: "var(--muted)", display: "block", marginBottom: 6, textTransform: "uppercase", letterSpacing: "0.08em" }}>Date</label>
             <input type="date" value={date} onChange={e => setDate(e.target.value)} style={inputStyle} />
           </div>
+
+          {type === "expense" && (
+            <div>
+              <label style={{ fontSize: 11, color: "var(--muted)", display: "block", marginBottom: 8, textTransform: "uppercase", letterSpacing: "0.08em" }}>Sumber Dana</label>
+              <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+                {FUNDING_SOURCES.map(s => (
+                  <button key={s} onClick={() => setSource(s)} style={{
+                    padding: "6px 12px", borderRadius: 8, border: "1px solid",
+                    borderColor: source === s ? meta.color : "var(--border)",
+                    background: source === s ? meta.colorDim : "transparent",
+                    color: source === s ? "var(--text)" : "var(--muted)",
+                    fontSize: 12, cursor: "pointer", fontFamily: "Inter, sans-serif",
+                    transition: "all 0.15s",
+                  }}>
+                    {SOURCE_META[s].icon} {SOURCE_META[s].label}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
 
         <button onClick={handleSubmit} disabled={loading || !title || !amount} style={{

@@ -35,6 +35,7 @@ export async function PUT(
       category: body.category,
       date: body.date,
       ...(body.adminFee !== undefined ? { adminFee: body.adminFee } : {}),
+      ...(body.source !== undefined ? { source: body.source } : {}),
     })
     .eq("id", id)
     .select()
